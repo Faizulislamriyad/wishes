@@ -14,6 +14,7 @@ body{
     var(--bg);
   background-attachment:fixed;
   -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
 }
 button{font-family:inherit;cursor:pointer;}
 textarea,input{font-family:inherit;}
@@ -32,6 +33,11 @@ textarea,input{font-family:inherit;}
   font-size:1.25rem; font-weight:800; letter-spacing:.3px;
   background:linear-gradient(90deg,#a78bfa,#ff7ab6);
   -webkit-background-clip:text; background-clip:text; color:transparent;
+  display:inline-flex; align-items:center; gap:7px;
+}
+.brand i{
+  -webkit-text-fill-color:initial; color:#a78bfa;
+  background:none;
 }
 .spacer{flex:1;}
 
@@ -39,6 +45,7 @@ textarea,input{font-family:inherit;}
   border:1px solid transparent; border-radius:12px;
   padding:9px 16px; font-size:.9rem; font-weight:600;
   transition:.18s; white-space:nowrap;
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
 }
 .btn.primary{
   background:linear-gradient(135deg,var(--accent),var(--accent2));
@@ -48,10 +55,10 @@ textarea,input{font-family:inherit;}
 .btn.ghost{background:transparent; color:var(--muted); border-color:var(--border);}
 .btn.ghost:hover{color:var(--text); border-color:var(--accent);}
 .btn.google{
-  background:#fff; color:#333; border:none; padding:8px 14px;
-  display:inline-flex; align-items:center; gap:7px; font-weight:700;
+  background:#fff; color:#333; border:none; padding:8px 14px; font-weight:700;
 }
 .btn.google:hover{background:#f0f0f0; transform:translateY(-1px);}
+.btn.google i{color:#EA4335; font-size:.95rem;}
 .btn.small{padding:6px 12px; font-size:.8rem; border-radius:9px;}
 .btn:disabled{opacity:.55; cursor:not-allowed; transform:none;}
 
@@ -123,6 +130,7 @@ textarea,input{font-family:inherit;}
   border:1px solid var(--border); border-radius:14px;
   padding:12px 16px; margin-bottom:16px; font-size:.9rem;
 }
+.banner i{color:#a78bfa;}
 
 .post{padding:16px; margin-bottom:16px; animation:pop .28s ease;}
 @keyframes pop{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
@@ -138,9 +146,10 @@ textarea,input{font-family:inherit;}
 }
 .icon-btn{
   background:transparent; border:none; font-size:.95rem;
-  padding:6px; border-radius:8px; opacity:.7; transition:.15s;
+  padding:6px 8px; border-radius:8px; opacity:.7; transition:.15s;
+  color:var(--text);
 }
-.icon-btn:hover{opacity:1; background:var(--card2);}
+.icon-btn:hover{opacity:1; background:var(--card2); color:var(--accent);}
 
 .post-body{
   margin-top:13px; font-size:1rem; line-height:1.65;
@@ -170,6 +179,7 @@ textarea,input{font-family:inherit;}
   display:flex; gap:14px; margin-top:12px;
   font-size:.76rem; color:var(--muted);
 }
+.post-stats i{margin-right:3px;}
 
 .post-actions{
   display:flex; gap:6px; margin-top:10px;
@@ -179,9 +189,11 @@ textarea,input{font-family:inherit;}
   flex:1; background:transparent; border:none; border-radius:10px;
   padding:8px 6px; font-size:.84rem; font-weight:600; color:var(--muted);
   transition:.15s;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
 }
 .act:hover{background:var(--card2); color:var(--text);}
 .act.liked{color:#ff6b9d;}
+.act.liked i{color:#ff6b9d;}
 
 .edit-box{margin-top:12px;}
 .edit-box textarea{
@@ -263,7 +275,12 @@ textarea,input{font-family:inherit;}
   text-align:center; padding:56px 20px; color:var(--muted);
   border:1px dashed var(--border); border-radius:var(--radius);
 }
-.empty .big{font-size:2.6rem; display:block; margin-bottom:10px;}
+.empty .big,
+.empty .empty-icon{
+  font-size:2.6rem; display:block; margin-bottom:10px;
+  color:#a78bfa; opacity:.85;
+}
+.empty.warn .empty-icon{color:#ff9dc0;}
 
 #toast{
   position:fixed; left:50%; bottom:26px; transform:translate(-50%,140%);
@@ -282,4 +299,24 @@ textarea,input{font-family:inherit;}
   .profile-chip{padding:5px;}
   .topbar{gap:6px; padding:10px 12px;}
   .btn.small{padding:6px 9px; font-size:.75rem;}
+}
+
+/* ---------- Prevent iOS auto-zoom & keep readable on mobile ---------- */
+@media (max-width:768px){
+  input:not([type=checkbox]):not([type=radio]):not([type=file]),
+  textarea,
+  select{
+    font-size:16px !important;
+  }
+  .composer textarea{font-size:16px;}
+  .comment-input{font-size:16px;}
+  .edit-box textarea{font-size:16px;}
+  .field input[type=text],
+  .field input:not([type]){font-size:16px;}
+
+  /* Bump up small text so nothing looks tiny on mobile */
+  .post-time, .c-time{font-size:.82rem;}
+  .c-name, .c-actions button{font-size:.85rem;}
+  .c-body, .small, .post-stats, .act{font-size:.88rem;}
+  .tag{font-size:.7rem;}
 }

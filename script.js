@@ -26,10 +26,10 @@ const db   = getFirestore(app);
 /* ---------- i18n ---------- */
 const I18N = {
   bn: {
-    shareProfile:'🔗 শেয়ার', signInGoogle:'Google দিয়ে সাইন ইন',
+    shareProfile:'শেয়ার', signInGoogle:'Google দিয়ে সাইন ইন',
     continueGuest:'অতিথি হিসেবে চালিয়ে যান',
     authTitle:'স্বাগতম!', authSubtitle:'আপনার উইশ শেয়ার করতে সাইন ইন করুন',
-    postPlaceholder:'আপনার উইশ লিখুন... ✨', image:'ছবি', anonymous:'বেনামী',
+    postPlaceholder:'আপনার উইশ লিখুন...', image:'ছবি', anonymous:'বেনামী',
     attachProfile:'প্রোফাইল যুক্ত', postWish:'উইশ পোস্ট করুন', posting:'পোস্ট হচ্ছে...',
     myProfile:'আমার প্রোফাইল', displayName:'প্রদর্শিত নাম', avatarImage:'প্রোফাইল ছবি',
     save:'সেভ', cancel:'বাতিল', signOut:'সাইন আউট', signInWithGoogle:'Google দিয়ে সাইন ইন',
@@ -46,11 +46,11 @@ const I18N = {
     confirmDeleteComment:'এই কমেন্ট ও এর সব উত্তর মুছে ফেলবেন?',
     wishRequired:'উইশ লিখুন অথবা একটি ছবি দিন', commentRequired:'কমেন্ট লিখুন',
     replyRequired:'উত্তর লিখুন', imageTooBig:'ছবি অনেক বড় — ছোট একটি ছবি দিন',
-    postSuccess:'উইশ পোস্ট হয়ে গেছে ✨', postError:'পোস্ট করা যায়নি — আবার চেষ্টা করুন',
-    deleted:'মুছে ফেলা হয়েছে 🗑️', deleteError:'মুছে ফেলা যায়নি',
-    updated:'আপডেট হয়েছে ✅', updateError:'আপডেট করা যায়নি',
-    profileUpdated:'প্রোফাইল আপডেট হয়েছে ✅', profileError:'প্রোফাইল সেভ করা যায়নি',
-    linkCopied:'লিংক কপি হয়েছে 🔗', copyPrompt:'এই লিংকটি কপি করুন:',
+    postSuccess:'উইশ পোস্ট হয়ে গেছে', postError:'পোস্ট করা যায়নি — আবার চেষ্টা করুন',
+    deleted:'মুছে ফেলা হয়েছে', deleteError:'মুছে ফেলা যায়নি',
+    updated:'আপডেট হয়েছে', updateError:'আপডেট করা যায়নি',
+    profileUpdated:'প্রোফাইল আপডেট হয়েছে', profileError:'প্রোফাইল সেভ করা যায়নি',
+    linkCopied:'লিংক কপি হয়েছে', copyPrompt:'এই লিংকটি কপি করুন:',
     showingFrom:'দেখানো হচ্ছে', userWishesOf:' এর উইশগুলো', showAll:'সব দেখান',
     googleSignInError:'Google সাইন ইন ব্যর্থ হয়েছে', welcome:'স্বাগতম',
     signOutConfirm:'সাইন আউট করবেন?', viewProfile:'প্রোফাইল দেখুন →',
@@ -59,10 +59,10 @@ const I18N = {
     netErr:'নেটওয়ার্ক সমস্যা', signInFail:'সাইন ইন ব্যর্থ'
   },
   en: {
-    shareProfile:'🔗 Share', signInGoogle:'Sign in with Google',
+    shareProfile:'Share', signInGoogle:'Sign in with Google',
     continueGuest:'Continue as Guest',
     authTitle:'Welcome!', authSubtitle:'Sign in to share your wishes',
-    postPlaceholder:'Write your wish... ✨', image:'Image', anonymous:'Anonymous',
+    postPlaceholder:'Write your wish...', image:'Image', anonymous:'Anonymous',
     attachProfile:'Attach profile', postWish:'Post Wish', posting:'Posting...',
     myProfile:'My Profile', displayName:'Display name', avatarImage:'Avatar image',
     save:'Save', cancel:'Cancel', signOut:'Sign Out', signInWithGoogle:'Sign in with Google',
@@ -79,11 +79,11 @@ const I18N = {
     confirmDeleteComment:'Delete this comment and all its replies?',
     wishRequired:'Write a wish or add an image', commentRequired:'Write a comment',
     replyRequired:'Write a reply', imageTooBig:'Image too large — pick a smaller one',
-    postSuccess:'Wish posted ✨', postError:'Could not post — try again',
-    deleted:'Deleted 🗑️', deleteError:'Could not delete',
-    updated:'Updated ✅', updateError:'Could not update',
-    profileUpdated:'Profile updated ✅', profileError:'Could not save profile',
-    linkCopied:'Link copied 🔗', copyPrompt:'Copy this link:',
+    postSuccess:'Wish posted', postError:'Could not post — try again',
+    deleted:'Deleted', deleteError:'Could not delete',
+    updated:'Updated', updateError:'Could not update',
+    profileUpdated:'Profile updated', profileError:'Could not save profile',
+    linkCopied:'Link copied', copyPrompt:'Copy this link:',
     showingFrom:'Showing wishes from', userWishesOf:'', showAll:'Show all',
     googleSignInError:'Google sign-in failed', welcome:'Welcome',
     signOutConfirm:'Sign out?', viewProfile:'View profile →',
@@ -385,9 +385,9 @@ async function buildFilterBanner(){
     if (s.exists()) name = s.data().name || name;
   } catch {}
   filterBanner.innerHTML = `
-    <span>🔎 ${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}</span>
+    <span><i class="fa-solid fa-magnifying-glass"></i> ${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}</span>
     <div class="spacer"></div>
-    <button class="btn ghost small" id="clearFilter">${esc(t('showAll'))}</button>`;
+    <button class="btn ghost small" id="clearFilter"><i class="fa-solid fa-xmark"></i> ${esc(t('showAll'))}</button>`;
   filterBanner.classList.remove('hidden');
   $('clearFilter').addEventListener('click', () => {
     filterUid = null;
@@ -407,7 +407,7 @@ function startFeed(){
     renderFeed();
   }, err => {
     console.error('feed error:', err);
-    feed.innerHTML = `<div class="empty"><span class="big">⚠️</span>
+    feed.innerHTML = `<div class="empty warn"><i class="fa-solid fa-triangle-exclamation empty-icon"></i>
       <span>Firestore load failed — rules check করুন।</span></div>`;
   });
 }
@@ -417,7 +417,7 @@ function renderFeed(){
 
   if (!posts.length){
     renderedSigs.clear();
-    feed.innerHTML = `<div class="empty"><span class="big">🌠</span>
+    feed.innerHTML = `<div class="empty"><i class="fa-solid fa-star empty-icon"></i>
       <b>${esc(t('noPosts'))}</b><br>
       <span class="small">${esc(t('noPostsSub'))}</span></div>`;
     return;
@@ -473,8 +473,8 @@ function renderPost(p){
         <div class="post-time">${timeAgo(p.createdAt)}${p.editedAt ? ' · ' + esc(t('edited')) : ''}</div>
       </div>
       ${mine ? `<div>
-        <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}">✏️</button>
-        <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}">🗑️</button>
+        <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
+        <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>
       </div>` : ''}
     </div>
     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
@@ -491,15 +491,22 @@ function renderPost(p){
         </div>
       </div>` : ''}
     <div class="post-stats">
-      <span>❤️ ${likeCount} ${esc(t('likes'))}</span>
-      <span>💬 ${commentCount} ${esc(t('comments'))}</span>
+      <span><i class="fa-solid fa-heart"></i> ${likeCount} ${esc(t('likes'))}</span>
+      <span><i class="fa-regular fa-comment"></i> ${commentCount} ${esc(t('comments'))}</span>
     </div>
     <div class="post-actions">
       <button class="act ${liked ? 'liked' : ''}" data-act="like">
-        ${liked ? '❤️' : '🤍'} ${esc(liked ? t('liked') : t('like'))}
+        <i class="${liked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+        <span>${esc(liked ? t('liked') : t('like'))}</span>
       </button>
-      <button class="act" data-act="toggle-comments">💬 ${esc(t('comment'))}</button>
-      <button class="act" data-act="share">🔗 ${esc(t('share'))}</button>
+      <button class="act" data-act="toggle-comments">
+        <i class="fa-regular fa-comment"></i>
+        <span>${esc(t('comment'))}</span>
+      </button>
+      <button class="act" data-act="share">
+        <i class="fa-solid fa-share-nodes"></i>
+        <span>${esc(t('share'))}</span>
+      </button>
     </div>
     <div class="comments" id="comments-${p.id}" ${openComments.has(p.id) ? '' : 'hidden'}></div>
   </article>`;
@@ -516,7 +523,7 @@ function subscribeComments(postId){
     if (box){
       const postEl = box.closest('.post');
       const stats = postEl?.querySelector('.post-stats span:nth-child(2)');
-      if (stats) stats.textContent = `💬 ${snap.size} ${t('comments')}`;
+      if (stats) stats.innerHTML = `<i class="fa-regular fa-comment"></i> ${snap.size} ${t('comments')}`;
     }
   }, err => console.error('comments:', err));
   commentUnsubs.set(postId, unsub);
@@ -544,7 +551,9 @@ function renderCommentsFor(postId){
     <div class="comment-form">
       <textarea class="comment-input" data-key="${postId}:root" rows="1"
         placeholder="${esc(t('writeComment'))}"></textarea>
-      <button class="btn small primary" data-act="add-comment">${esc(t('send'))}</button>
+      <button class="btn small primary" data-act="add-comment">
+        <i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}
+      </button>
     </div>
     ${buildTree('root') || `<p class="muted small" style="margin:0">${esc(t('noComments'))}</p>`}`;
 
@@ -570,9 +579,9 @@ function renderComment(c, byParent){
     </div>
     <div class="c-body">${esc(c.text)}</div>
     <div class="c-actions">
-      <button data-act="reply-comment">${esc(t('reply'))}</button>
-      ${mine ? `<button data-act="edit-comment">${esc(t('edit'))}</button>
-                <button data-act="delete-comment">${esc(t('delete'))}</button>` : ''}
+      <button data-act="reply-comment"><i class="fa-solid fa-reply"></i> ${esc(t('reply'))}</button>
+      ${mine ? `<button data-act="edit-comment"><i class="fa-solid fa-pen"></i> ${esc(t('edit'))}</button>
+                <button data-act="delete-comment"><i class="fa-solid fa-trash"></i> ${esc(t('delete'))}</button>` : ''}
     </div>
     <div class="c-reply hidden" data-open="0"></div>
     ${kids.length ? `<div class="c-children">${kids.map(k => renderComment(k, byParent)).join('')}</div>` : ''}
@@ -767,7 +776,7 @@ feed.addEventListener('click', async e => {
       <textarea rows="3" maxlength="1000"></textarea>
       <div class="row end">
         <button class="btn small ghost" data-act="cancel-edit">${esc(t('cancel'))}</button>
-        <button class="btn small primary" data-act="save-post">${esc(t('save'))}</button>
+        <button class="btn small primary" data-act="save-post"><i class="fa-solid fa-check"></i> ${esc(t('save'))}</button>
       </div>`;
     box.querySelector('textarea').value = post.text || '';
     if (bodyEl) bodyEl.replaceWith(box);
@@ -826,7 +835,7 @@ feed.addEventListener('click', async e => {
         placeholder="${esc(t('writeReply'))}"></textarea>
       <div class="row end">
         <button class="btn small ghost" data-act="cancel-reply">${esc(t('cancel'))}</button>
-        <button class="btn small primary" data-act="send-reply" data-parent="${cid}">${esc(t('send'))}</button>
+        <button class="btn small primary" data-act="send-reply" data-parent="${cid}"><i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}</button>
       </div>`;
     const ta = box.querySelector('textarea');
     ta.value = drafts.get(`${postId}:${cid}`) || '';
@@ -863,7 +872,7 @@ feed.addEventListener('click', async e => {
       <textarea class="comment-input" rows="2"></textarea>
       <div class="row end">
         <button class="btn small ghost" data-act="cancel-comment-edit">${esc(t('cancel'))}</button>
-        <button class="btn small primary" data-act="save-comment">${esc(t('save'))}</button>
+        <button class="btn small primary" data-act="save-comment"><i class="fa-solid fa-check"></i> ${esc(t('save'))}</button>
       </div>`;
     box.querySelector('textarea').value = body.textContent;
     body.replaceWith(box);
