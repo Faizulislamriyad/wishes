@@ -412,46 +412,211 @@ function startFeed(){
   });
 }
 
+/* Structural signature — deliberately EXCLUDES likes & commentCount so that
+   a like/comment won't cause the post HTML to be rebuilt */
+function makePostSig(p){
+  return JSON.stringify([
+    lang, p.text, p.imageUrl, p.editedAt, p.showProfile,
+    p.authorName, p.authorPhoto, p.anonymous, p.createdAt, p.uid
+  ]);
+}
+
+/* Patch only the live counters / like button — cheap, no flicker */
+function patchPostDynamic(el, p){
+  const likes = p.likes || [];
+  const liked = currentUser ? likes.includes(currentUser.uid) : false;
+  const likeCount = likes.length;
+  const commentCount = Math.max(0, p.commentCount || 0);
+
+  const likeBtn = el.querySelector('button[data-act="like"]');
+  if (likeBtn){
+    const newClass = 'act' + (liked ? ' liked' : '');
+    if (likeBtn.className !== newClass) likeBtn.className = newClass;
+    const newHTML =
+      `<i class="${liked ? 'fa-solid' : 'fa-regular'} fa-heart"></i> ` +
+      `<span>${esc(liked ? t('liked') : t('like'))}</span>`;
+    if (likeBtn.innerHTML !== newHTML) likeBtn.innerHTML = newHTML;
+  }
+
+  const stats = el.querySelectorAll('.post-stats span');
+  if (stats[0]){
+    const html = `<i class="fa-solid fa-heart"></i> ${likeCount} ${esc(t('likes'))}`;
+    if (stats[0].innerHTML !== html) stats[0].innerHTML = html;
+  }
+  if (stats[1]){
+    const html = `<i class="fa-regular fa-comment"></i> ${commentCount} ${esc(t('comments'))}`;
+    if (stats[1].innerHTML !== html) stats[1].innerHTML = html;
+  }
+}
+
+/* Patch structural bits — author, text, image, profile card, edit buttons.
+   Nothing is replaced wholesale, so the element identity (and its state)
+   is preserved. */
+function patchPostStructure(el, p){
+  const name  = p.anonymous ? t('guest') : (p.authorName || t('guest'));
+  const photo = p.anonymous ? '' : (p.authorPhoto || '');
+  const displayName = p.anonymous ? t('anon') : name;
+
+  const headEl = el.querySelector('.post-head');
+
+  /* avatar */
+  const avatarEl = headEl.querySelector('.avatar');
+  const avSig = `${name}|${photo}`;
+  if (avatarEl.dataset.sig !== avSig){
+    const tmp = document.createElement('div');
+    tmp.innerHTML = avatarHTML(p.anonymous ? '?' : name, photo);
+    const newAv = tmp.firstElementChild;
+    newAv.dataset.sig = avSig;
+    avatarEl.replaceWith(newAv);
+  }
+
+  /* display name */
+  const nameEl = headEl.querySelector('.post-name');
+  const newNameHTML =
+    `${esc(displayName)}${p.anonymous ? ` <span class="tag">${esc(t('anon'))}</span>` : ''}`;
+  if (nameEl.innerHTML !== newNameHTML) nameEl.innerHTML = newNameHTML;
+
+  /* timestamp */
+  const timeEl = headEl.querySelector('.post-time');
+  const newTime = timeAgo(p.createdAt) + (p.editedAt ? ' · ' + esc(t('edited')) : '');
+  if (timeEl.textContent !== newTime) timeEl.textContent = newTime;
+
+  /* edit / delete buttons */
+  const mine = p.uid === currentUser?.uid;
+  const actionsEl = headEl.querySelector('.post-actions-top');
+  if (mine && !actionsEl){
+    const btnDiv = document.createElement('div');
+    btnDiv.className = 'post-actions-top';
+    btnDiv.innerHTML = `
+      <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
+      <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>`;
+    headEl.appendChild(btnDiv);
+  } else if (!mine && actionsEl){
+    actionsEl.remove();
+  }
+
+  /* body text */
+  const bodyEl = el.querySelector('.post-body');
+  if (p.text){
+    if (bodyEl){
+      if (bodyEl.textContent !== p.text) bodyEl.textContent = p.text;
+    } else {
+      const newBody = document.createElement('div');
+      newBody.className = 'post-body';
+      newBody.textContent = p.text;
+      headEl.after(newBody);
+    }
+  } else if (bodyEl){
+    bodyEl.remove();
+  }
+
+  /* image */
+  const imgWrap = el.querySelector('.post-image');
+  if (p.imageUrl){
+    if (imgWrap){
+      const img = imgWrap.querySelector('img');
+      if (img.getAttribute('src') !== p.imageUrl) img.src = p.imageUrl;
+    } else {
+      const newImg = document.createElement('div');
+      newImg.className = 'post-image';
+      newImg.innerHTML = `<img src="${esc(p.imageUrl)}" loading="lazy" alt="">`;
+      el.querySelector('.post-stats').before(newImg);
+    }
+  } else if (imgWrap){
+    imgWrap.remove();
+  }
+
+  /* profile card */
+  const pcEl = el.querySelector('.profile-card');
+  const shouldShowPC = p.showProfile && !p.anonymous;
+  const pcSig = `${name}|${photo}|${p.uid}`;
+  if (shouldShowPC){
+    const pcHTML = `
+      <div class="pc-label">${esc(t('sharedProfile'))}</div>
+      <div class="pc-row">
+        ${avatarHTML(name, photo)}
+        <div>
+          <div class="pc-name">${esc(name)}</div>
+          <a class="pc-link" href="?user=${esc(p.uid)}">${esc(t('viewProfile'))}</a>
+        </div>
+      </div>`;
+    if (pcEl){
+      if (pcEl.dataset.sig !== pcSig){
+        pcEl.innerHTML = pcHTML;
+        pcEl.dataset.sig = pcSig;
+      }
+    } else {
+      const newPC = document.createElement('div');
+      newPC.className = 'profile-card';
+      newPC.innerHTML = pcHTML;
+      newPC.dataset.sig = pcSig;
+      el.querySelector('.post-stats').before(newPC);
+    }
+  } else if (pcEl){
+    pcEl.remove();
+  }
+}
+
 function renderFeed(){
   const posts = filterUid ? allPosts.filter(p => p.uid === filterUid) : allPosts;
 
+  /* Empty state — only touch the DOM if we aren't already showing it */
   if (!posts.length){
-    renderedSigs.clear();
-    feed.innerHTML = `<div class="empty"><i class="fa-solid fa-star empty-icon"></i>
-      <b>${esc(t('noPosts'))}</b><br>
-      <span class="small">${esc(t('noPostsSub'))}</span></div>`;
+    if (!feed.querySelector('.empty')){
+      renderedSigs.clear();
+      feed.innerHTML = `<div class="empty"><i class="fa-solid fa-star empty-icon"></i>
+        <b>${esc(t('noPosts'))}</b><br>
+        <span class="small">${esc(t('noPostsSub'))}</span></div>`;
+    }
     return;
   }
   if (feed.querySelector('.empty')) feed.innerHTML = '';
 
   const seen = new Set();
-  posts.forEach(p => {
+
+  posts.forEach((p) => {
     seen.add(p.id);
-    const liked = currentUser ? (p.likes || []).includes(currentUser.uid) : false;
-    const sig = JSON.stringify([
-      lang, p.text, p.imageUrl, p.likeCount || 0, liked,
-      p.commentCount || 0, p.editedAt, p.showProfile,
-      p.authorName, p.authorPhoto, p.anonymous, p.createdAt
-    ]);
     const existing = feed.querySelector(`.post[data-id="${p.id}"]`);
-    if (existing && renderedSigs.get(p.id) === sig) return;
 
-    const tmp = document.createElement('div');
-    tmp.innerHTML = renderPost(p);
-    const el = tmp.firstElementChild;
-    if (existing) existing.replaceWith(el);
-    else feed.appendChild(el);
-    renderedSigs.set(p.id, sig);
+    /* New post — create with enter animation */
+    if (!existing){
+      const tmp = document.createElement('div');
+      tmp.innerHTML = renderPost(p);
+      const el = tmp.firstElementChild;
+      el.classList.add('enter');
+      feed.appendChild(el);
+      renderedSigs.set(p.id, makePostSig(p));
+      patchPostDynamic(el, p);
+      return;
+    }
+
+    /* Existing post — always patch dynamic bits (like, counts) */
+    patchPostDynamic(existing, p);
+
+    /* Only rebuild the structure if actual content changed */
+    const sig = makePostSig(p);
+    if (renderedSigs.get(p.id) !== sig){
+      patchPostStructure(existing, p);
+      renderedSigs.set(p.id, sig);
+    }
   });
 
+  /* Remove posts that no longer exist */
   [...feed.querySelectorAll('.post')].forEach(el => {
-    if (!seen.has(el.dataset.id)){ el.remove(); renderedSigs.delete(el.dataset.id); }
+    if (!seen.has(el.dataset.id)){
+      el.remove();
+      renderedSigs.delete(el.dataset.id);
+    }
   });
-  posts.forEach(p => {
+
+  /* Reorder WITHOUT moving DOM nodes — just set flex order */
+  posts.forEach((p, i) => {
     const el = feed.querySelector(`.post[data-id="${p.id}"]`);
-    if (el) feed.appendChild(el);
+    if (el){
+      const ord = String(i);
+      if (el.style.order !== ord) el.style.order = ord;
+    }
   });
-  openComments.forEach(id => renderCommentsFor(id));
 }
 
 function renderPost(p){
@@ -472,7 +637,7 @@ function renderPost(p){
         <div class="post-name">${esc(displayName)}${p.anonymous ? ` <span class="tag">${esc(t('anon'))}</span>` : ''}</div>
         <div class="post-time">${timeAgo(p.createdAt)}${p.editedAt ? ' · ' + esc(t('edited')) : ''}</div>
       </div>
-      ${mine ? `<div>
+      ${mine ? `<div class="post-actions-top">
         <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
         <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>
       </div>` : ''}

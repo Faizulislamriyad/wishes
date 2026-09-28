@@ -81,6 +81,8 @@ textarea,input{font-family:inherit;}
 
 .container{max-width:680px; margin:0 auto; padding:20px 14px 80px;}
 
+#feed{display:flex; flex-direction:column;}
+
 .card{
   background:linear-gradient(180deg,var(--card),#141530);
   border:1px solid var(--border);
@@ -132,7 +134,9 @@ textarea,input{font-family:inherit;}
 }
 .banner i{color:#a78bfa;}
 
-.post{padding:16px; margin-bottom:16px; animation:pop .28s ease;}
+.post{padding:16px; margin-bottom:16px;}
+/* Only NEW posts animate in — existing posts never flash on updates */
+.post.enter{animation:pop .28s ease;}
 @keyframes pop{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
 
 .post-head{display:flex; align-items:center; gap:11px;}
