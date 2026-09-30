@@ -47,29 +47,36 @@
   <!-- Main app -->
   <div id="appMain" class="hidden">
 
-    <section class="composer card">
-      <textarea id="wishText" maxlength="1000" data-i18n-placeholder="postPlaceholder"
-        placeholder="আপনার উইশ লিখুন..."></textarea>
-
-      <div id="previewWrap" class="preview-wrap hidden">
-        <img id="previewImg" alt="">
-        <button class="remove" id="removeImg" title="Remove">✕</button>
+    <!-- Composer: collapsed by default -->
+    <section class="composer card collapsed" id="composer">
+      <div class="composer-trigger" id="composerTrigger">
+        <i class="fa-regular fa-pen-to-square"></i>
+        <span data-i18n="composeTrigger">আপনার উইশ লিখুন...</span>
       </div>
+      <div class="composer-body" id="composerBody">
+        <textarea id="wishText" maxlength="1000" data-i18n-placeholder="postPlaceholder"
+          placeholder="আপনার উইশ লিখুন..."></textarea>
 
-      <div class="composer-row">
-        <label class="file-btn">
-          <i class="fa-regular fa-image"></i>
-          <span data-i18n="image">ছবি</span>
-          <input type="file" id="imageInput" accept="image/*" hidden>
-        </label>
-        <label class="check"><input type="checkbox" id="anonToggle">
-          <span data-i18n="anonymous">বেনামী</span>
-        </label>
-        <label class="check"><input type="checkbox" id="profileCardToggle">
-          <span data-i18n="attachProfile">প্রোফাইল যুক্ত</span>
-        </label>
-        <div class="spacer"></div>
-        <button id="postBtn" class="btn primary" data-i18n="postWish">উইশ পোস্ট করুন</button>
+        <div id="previewWrap" class="preview-wrap hidden">
+          <img id="previewImg" alt="">
+          <button class="remove" id="removeImg" title="Remove">✕</button>
+        </div>
+
+        <div class="composer-row">
+          <label class="file-btn">
+            <i class="fa-regular fa-image"></i>
+            <span data-i18n="image">ছবি</span>
+            <input type="file" id="imageInput" accept="image/*" hidden>
+          </label>
+          <label class="check"><input type="checkbox" id="anonToggle">
+            <span data-i18n="anonymous">বেনামী</span>
+          </label>
+          <label class="check"><input type="checkbox" id="profileCardToggle">
+            <span data-i18n="attachProfile">প্রোফাইল যুক্ত</span>
+          </label>
+          <div class="spacer"></div>
+          <button id="postBtn" class="btn primary" data-i18n="postWish">উইশ পোস্ট করুন</button>
+        </div>
       </div>
     </section>
 
@@ -95,11 +102,22 @@
       <input type="file" id="avatarInput" accept="image/*">
     </label>
 
+    <label class="field">
+      <span data-i18n="anonNickname">বেনামী নাম</span>
+      <input id="anonNameInput" maxlength="30" placeholder="Anonymous">
+      <small class="field-hint" data-i18n="anonNicknameHint">বেনামী হিসেবে পোস্ট করলে এই নাম দেখানো হবে</small>
+    </label>
+
     <div class="row end">
       <button class="btn ghost" id="closeModal" data-i18n="cancel">বাতিল</button>
       <button class="btn primary" id="saveProfile" data-i18n="save">সেভ</button>
     </div>
-    <div class="row" style="justify-content:center; margin-top:14px;">
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="myPostsBtn">
+        <i class="fa-solid fa-list"></i>
+        <span data-i18n="myPosts">আমার পোস্টগুলো</span>
+      </button>
       <button class="btn ghost small hidden" id="signOutBtn" data-i18n="signOut">সাইন আউট</button>
     </div>
   </div>

@@ -324,3 +324,91 @@ textarea,input{font-family:inherit;}
   .c-body, .small, .post-stats, .act{font-size:.88rem;}
   .tag{font-size:.7rem;}
 }
+/* ============================================================
+   NEW FEATURES
+   ============================================================ */
+
+/* ---------- Collapsible composer ---------- */
+.composer-trigger{
+  display:none;
+  align-items:center; gap:12px;
+  padding:16px;
+  cursor:pointer;
+  color:var(--muted);
+  font-size:1rem;
+  border-radius:var(--radius);
+  transition:.18s;
+}
+.composer-trigger:hover{color:var(--text);}
+.composer-trigger i{
+  font-size:1.1rem; color:var(--accent);
+}
+.composer.collapsed .composer-trigger{display:flex;}
+.composer.collapsed .composer-body{display:none;}
+.composer:not(.collapsed) .composer-body{padding:16px;}
+
+/* ---------- Post menu (3-dot) ---------- */
+.post-head-actions{
+  display:flex; align-items:center; gap:2px;
+}
+.post-menu-wrap{position:relative;}
+.post-menu{
+  position:absolute; top:100%; right:0; z-index:40;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:6px;
+  box-shadow:0 14px 34px -12px #000;
+  min-width:230px;
+  margin-top:6px;
+  animation:pop .18s ease;
+}
+.menu-item{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:8px;
+  font-size:.88rem; color:var(--text);
+  background:none; border:none; width:100%;
+  text-align:left; cursor:pointer;
+  transition:.15s;
+}
+.menu-item:hover{background:var(--card2);}
+.menu-item i{
+  width:16px; text-align:center; color:var(--muted); flex:none;
+}
+.menu-item.check-item{cursor:pointer;}
+.menu-item.check-item input{
+  accent-color:var(--accent); width:16px; height:16px; flex:none;
+}
+.menu-item.check-item span{flex:1;}
+.menu-sep{height:1px; background:var(--border); margin:4px 6px;}
+
+/* ---------- Field hint ---------- */
+.field-hint{
+  display:block; margin-top:6px;
+  font-size:.74rem; color:var(--muted); line-height:1.4;
+}
+
+/* ---------- Modal actions ---------- */
+.modal-actions{
+  display:flex; flex-direction:column; gap:8px;
+  margin-top:16px; padding-top:16px;
+  border-top:1px solid var(--border);
+}
+.modal-actions .btn{width:100%;}
+
+/* ---------- Single post mode ---------- */
+body.single-post-mode .composer{display:none;}
+body.single-post-mode #feed .post{margin-bottom:0;}
+body.single-post-mode{overflow-y:auto;}
+
+/* ---------- Hidden bits (toggled per-post) ---------- */
+.post.hide-like .post-stats .stat-likes,
+.post.hide-share button[data-act="share"],
+.post.hide-comments button[data-act="toggle-comments"]{
+  display:none;
+}
+.post.hide-comments .comments{display:none !important;}
+
+/* On mobile, ensure menu items are readable */
+@media (max-width:768px){
+  .menu-item{font-size:16px; padding:11px 12px;}
+  .post-menu{min-width:250px;}
+}

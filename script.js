@@ -29,9 +29,14 @@ const I18N = {
     shareProfile:'শেয়ার', signInGoogle:'Google দিয়ে সাইন ইন',
     continueGuest:'অতিথি হিসেবে চালিয়ে যান',
     authTitle:'স্বাগতম!', authSubtitle:'আপনার উইশ শেয়ার করতে সাইন ইন করুন',
+    composeTrigger:'আপনার উইশ লিখুন...',
     postPlaceholder:'আপনার উইশ লিখুন...', image:'ছবি', anonymous:'বেনামী',
     attachProfile:'প্রোফাইল যুক্ত', postWish:'উইশ পোস্ট করুন', posting:'পোস্ট হচ্ছে...',
     myProfile:'আমার প্রোফাইল', displayName:'প্রদর্শিত নাম', avatarImage:'প্রোফাইল ছবি',
+    anonNickname:'বেনামী নাম',
+    anonNicknameHint:'বেনামী হিসেবে পোস্ট করলে এই নামটি দেখানো হবে',
+    myPosts:'আমার পোস্টগুলো',
+    myPostsBanner:'আপনার উইশগুলো দেখানো হচ্ছে',
     save:'সেভ', cancel:'বাতিল', signOut:'সাইন আউট', signInWithGoogle:'Google দিয়ে সাইন ইন',
     guest:'অতিথি', anon:'বেনামী', edited:'সম্পাদিত',
     like:'লাইক', liked:'লাইকড', comment:'কমেন্ট', share:'শেয়ার',
@@ -40,6 +45,10 @@ const I18N = {
     noComments:'এখনো কোনো কমেন্ট নেই। প্রথম কমেন্ট আপনিই করুন!',
     writeComment:'একটি কমেন্ট লিখুন...', writeReply:'উত্তর লিখুন...',
     send:'পাঠান', reply:'উত্তর', edit:'সম্পাদনা', delete:'মুছুন',
+    menu:'মেনু',
+    hideLikeCount:'লাইক সংখ্যা লুকান',
+    hideCommentSection:'কমেন্ট সেকশন লুকান',
+    hideShareOption:'শেয়ার অপশন লুকান',
     justNow:'এইমাত্র', minAgo:m=>`${m} মিনিট আগে`, hrAgo:h=>`${h} ঘণ্টা আগে`,
     dayAgo:d=>`${d} দিন আগে`,
     confirmDeletePost:'এই উইশটি মুছে ফেলবেন?',
@@ -52,6 +61,8 @@ const I18N = {
     profileUpdated:'প্রোফাইল আপডেট হয়েছে', profileError:'প্রোফাইল সেভ করা যায়নি',
     linkCopied:'লিংক কপি হয়েছে', copyPrompt:'এই লিংকটি কপি করুন:',
     showingFrom:'দেখানো হচ্ছে', userWishesOf:' এর উইশগুলো', showAll:'সব দেখান',
+    viewingSinglePost:'একটি পোস্ট দেখছেন', backToAll:'সব পোস্ট',
+    postNotFound:'পোস্টটি খুঁজে পাওয়া যায়নি',
     googleSignInError:'Google সাইন ইন ব্যর্থ হয়েছে', welcome:'স্বাগতম',
     signOutConfirm:'সাইন আউট করবেন?', viewProfile:'প্রোফাইল দেখুন →',
     sharedProfile:'শেয়ার করা প্রোফাইল',
@@ -62,9 +73,14 @@ const I18N = {
     shareProfile:'Share', signInGoogle:'Sign in with Google',
     continueGuest:'Continue as Guest',
     authTitle:'Welcome!', authSubtitle:'Sign in to share your wishes',
+    composeTrigger:'Write your wish...',
     postPlaceholder:'Write your wish...', image:'Image', anonymous:'Anonymous',
     attachProfile:'Attach profile', postWish:'Post Wish', posting:'Posting...',
     myProfile:'My Profile', displayName:'Display name', avatarImage:'Avatar image',
+    anonNickname:'Anonymous nickname',
+    anonNicknameHint:'Shown when you post anonymously',
+    myPosts:'My Posts',
+    myPostsBanner:'Showing your wishes',
     save:'Save', cancel:'Cancel', signOut:'Sign Out', signInWithGoogle:'Sign in with Google',
     guest:'Guest', anon:'anon', edited:'edited',
     like:'Like', liked:'Liked', comment:'Comment', share:'Share',
@@ -73,6 +89,10 @@ const I18N = {
     noComments:'No comments yet. Be the first!',
     writeComment:'Write a comment...', writeReply:'Write a reply...',
     send:'Send', reply:'Reply', edit:'Edit', delete:'Delete',
+    menu:'Menu',
+    hideLikeCount:'Hide like count',
+    hideCommentSection:'Hide comment section',
+    hideShareOption:'Hide share option',
     justNow:'just now', minAgo:m=>`${m}m ago`, hrAgo:h=>`${h}h ago`,
     dayAgo:d=>`${d}d ago`,
     confirmDeletePost:'Delete this wish?',
@@ -85,6 +105,8 @@ const I18N = {
     profileUpdated:'Profile updated', profileError:'Could not save profile',
     linkCopied:'Link copied', copyPrompt:'Copy this link:',
     showingFrom:'Showing wishes from', userWishesOf:'', showAll:'Show all',
+    viewingSinglePost:'Viewing single post', backToAll:'Back to all',
+    postNotFound:'Post not found',
     googleSignInError:'Google sign-in failed', welcome:'Welcome',
     signOutConfirm:'Sign out?', viewProfile:'View profile →',
     sharedProfile:'Shared Profile',
@@ -108,30 +130,35 @@ function applyI18n(){
 
 /* ---------- State ---------- */
 let currentUser = null;
-let myProfile   = { name:'Guest', photo:'' };
+let myProfile   = { name:'Guest', photo:'', anonName:'' };
 let allPosts    = [];
 let selectedFile = null;
 let pendingAvatar = null;
-let filterUid = new URLSearchParams(location.search).get('user') || null;
+
+const params = new URLSearchParams(location.search);
+let filterUid   = params.get('user') || null;
+let filterPost  = params.get('post') || null;
+
 let feedUnsub = null;
-const openComments = new Set();
+const openComments  = new Set();
 const commentsCache = new Map();
 const commentUnsubs = new Map();
-const drafts = new Map();
-const renderedSigs = new Map();
+const drafts        = new Map();
+const renderedSigs  = new Map();
 
 /* ---------- DOM ---------- */
 const $ = id => document.getElementById(id);
-const feed = $('feed');
-const wishText = $('wishText');
-const imageInput = $('imageInput');
-const previewWrap = $('previewWrap');
-const previewImg = $('previewImg');
-const anonToggle = $('anonToggle');
+const feed          = $('feed');
+const wishText      = $('wishText');
+const imageInput    = $('imageInput');
+const previewWrap   = $('previewWrap');
+const previewImg    = $('previewImg');
+const anonToggle    = $('anonToggle');
 const profileToggle = $('profileCardToggle');
-const postBtn = $('postBtn');
-const filterBanner = $('filterBanner');
-const toastEl = $('toast');
+const postBtn       = $('postBtn');
+const filterBanner  = $('filterBanner');
+const toastEl       = $('toast');
+const composer      = $('composer');
 
 /* ---------- Helpers ---------- */
 const esc = s => String(s ?? '').replace(/[&<>"']/g,
@@ -159,7 +186,6 @@ function avatarHTML(name, photo, cls=''){
   const hue = [...(name||'x')].reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
   return `<span class="avatar ${cls}" style="background:hsl(${hue} 58% 42%)">${esc(ch)}</span>`;
 }
-
 async function compressImage(file, maxDim=1100, quality=0.72){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -186,6 +212,44 @@ async function compressImage(file, maxDim=1100, quality=0.72){
   });
 }
 
+/* ---------- Composer collapse ---------- */
+let composerTimer = null;
+function expandComposer(){
+  composer.classList.remove('collapsed');
+  setTimeout(() => wishText.focus(), 60);
+  scheduleComposerCollapse();
+}
+function collapseComposer(){
+  composer.classList.add('collapsed');
+  clearTimeout(composerTimer);
+}
+function scheduleComposerCollapse(){
+  clearTimeout(composerTimer);
+  composerTimer = setTimeout(() => {
+    if (composer.classList.contains('collapsed')) return;
+    if (wishText.value.trim() || selectedFile) return;   // keep open if there's content
+    collapseComposer();
+  }, 10000);
+}
+$('composerTrigger').addEventListener('click', expandComposer);
+wishText.addEventListener('input', scheduleComposerCollapse);
+wishText.addEventListener('focus', scheduleComposerCollapse);
+wishText.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !wishText.value.trim() && !selectedFile) collapseComposer();
+});
+document.addEventListener('click', e => {
+  // Collapse composer when clicking outside it (if empty)
+  if (!composer.contains(e.target) &&
+      !composer.classList.contains('collapsed') &&
+      !wishText.value.trim() && !selectedFile){
+    collapseComposer();
+  }
+  // Close any open post menus
+  if (!e.target.closest('.post-menu-wrap')){
+    document.querySelectorAll('.post-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
+  }
+});
+
 /* ---------- AUTH ---------- */
 onAuthStateChanged(auth, async (user) => {
   if (user){
@@ -195,6 +259,7 @@ onAuthStateChanged(auth, async (user) => {
     if (!feedUnsub) startFeed();
     await buildFilterBanner();
     updateAuthUI();
+    if (filterPost) document.body.classList.add('single-post-mode');
   } else {
     currentUser = null;
     if (feedUnsub){ feedUnsub(); feedUnsub = null; }
@@ -204,13 +269,9 @@ onAuthStateChanged(auth, async (user) => {
       console.error('Auto anonymous sign-in failed:', e);
       showAuthGate();
       updateAuthUI();
-      if (e.code === 'auth/operation-not-allowed'){
-        toast(t('anonDisabled'));
-      } else if (e.code === 'auth/network-request-failed'){
-        toast(t('netErr'));
-      } else {
-        toast(t('signInFail') + ': ' + (e.code || e.message));
-      }
+      if (e.code === 'auth/operation-not-allowed') toast(t('anonDisabled'));
+      else if (e.code === 'auth/network-request-failed') toast(t('netErr'));
+      else toast(t('signInFail') + ': ' + (e.code || e.message));
     }
   }
 });
@@ -300,16 +361,24 @@ async function loadProfile(){
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     if (snap.exists()){
       const d = snap.data();
-      myProfile = { name: d.name || 'Guest', photo: d.photo || '' };
+      myProfile = {
+        name: d.name || 'Guest',
+        photo: d.photo || '',
+        anonName: d.anonName || ''
+      };
     } else {
-      myProfile = { name: 'Guest-' + currentUser.uid.slice(0,4).toUpperCase(), photo: '' };
+      myProfile = {
+        name: 'Guest-' + currentUser.uid.slice(0,4).toUpperCase(),
+        photo: '',
+        anonName: ''
+      };
       await setDoc(doc(db, 'users', currentUser.uid), {
         ...myProfile, createdAt: serverTimestamp()
       });
     }
   } catch (e){
     console.error('loadProfile:', e);
-    myProfile = { name:'Guest', photo:'' };
+    myProfile = { name:'Guest', photo:'', anonName:'' };
   }
   renderMyChip();
 }
@@ -321,6 +390,7 @@ function renderMyChip(){
 $('profileBtn').addEventListener('click', () => {
   pendingAvatar = null;
   $('nameInput').value = myProfile.name;
+  $('anonNameInput').value = myProfile.anonName || '';
   $('avatarInput').value = '';
   $('modalAvatar').innerHTML = avatarHTML(myProfile.name, myProfile.photo);
   if (currentUser && !currentUser.isAnonymous) $('signOutBtn').classList.remove('hidden');
@@ -340,14 +410,15 @@ $('avatarInput').addEventListener('change', () => {
 });
 $('saveProfile').addEventListener('click', async () => {
   const name = $('nameInput').value.trim() || myProfile.name;
+  const anonName = $('anonNameInput').value.trim();
   const btn = $('saveProfile');
   btn.disabled = true; btn.textContent = '...';
   try {
     let photo = myProfile.photo;
     if (pendingAvatar) photo = await compressImage(pendingAvatar, 320, 0.82);
     await setDoc(doc(db, 'users', currentUser.uid),
-      { name, photo, updatedAt: serverTimestamp() }, { merge: true });
-    myProfile = { name, photo };
+      { name, photo, anonName, updatedAt: serverTimestamp() }, { merge: true });
+    myProfile = { name, photo, anonName };
     renderMyChip();
     $('modalBackdrop').classList.add('hidden');
     toast(t('profileUpdated'));
@@ -357,6 +428,18 @@ $('saveProfile').addEventListener('click', async () => {
   } finally {
     btn.disabled = false; btn.textContent = t('save');
   }
+});
+$('myPostsBtn').addEventListener('click', () => {
+  if (!currentUser) return;
+  filterUid = currentUser.uid;
+  filterPost = null;
+  document.body.classList.remove('single-post-mode');
+  history.replaceState(null, '', location.pathname + '?user=' + currentUser.uid);
+  $('modalBackdrop').classList.add('hidden');
+  renderedSigs.clear();
+  feed.innerHTML = '';
+  renderFeed();
+  buildFilterBanner();
 });
 $('shareProfileBtn').addEventListener('click', async () => {
   if (!currentUser) return;
@@ -378,14 +461,42 @@ $('langToggle').addEventListener('click', () => {
 
 /* ---------- Filter banner ---------- */
 async function buildFilterBanner(){
+  // Single post mode
+  if (filterPost){
+    const exists = allPosts.some(p => p.id === filterPost);
+    filterBanner.innerHTML = `
+      <span><i class="fa-solid fa-eye"></i> ${esc(t('viewingSinglePost'))}${!exists ? ' — ' + esc(t('postNotFound')) : ''}</span>
+      <div class="spacer"></div>
+      <button class="btn ghost small" id="clearFilter">
+        <i class="fa-solid fa-arrow-left"></i> ${esc(t('backToAll'))}
+      </button>`;
+    filterBanner.classList.remove('hidden');
+    $('clearFilter').addEventListener('click', () => {
+      filterPost = null;
+      document.body.classList.remove('single-post-mode');
+      history.replaceState(null, '', location.pathname);
+      filterBanner.classList.add('hidden');
+      renderedSigs.clear();
+      feed.innerHTML = '';
+      renderFeed();
+    });
+    return;
+  }
+  // User filter mode
   if (!filterUid){ filterBanner.classList.add('hidden'); return; }
+  const isMine = currentUser && filterUid === currentUser.uid;
   let name = '...';
-  try {
-    const s = await getDoc(doc(db, 'users', filterUid));
-    if (s.exists()) name = s.data().name || name;
-  } catch {}
+  if (!isMine){
+    try {
+      const s = await getDoc(doc(db, 'users', filterUid));
+      if (s.exists()) name = s.data().name || name;
+    } catch {}
+  }
+  const label = isMine
+    ? `<i class="fa-solid fa-user"></i> ${esc(t('myPostsBanner'))}`
+    : `<i class="fa-solid fa-magnifying-glass"></i> ${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}`;
   filterBanner.innerHTML = `
-    <span><i class="fa-solid fa-magnifying-glass"></i> ${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}</span>
+    <span>${label}</span>
     <div class="spacer"></div>
     <button class="btn ghost small" id="clearFilter"><i class="fa-solid fa-xmark"></i> ${esc(t('showAll'))}</button>`;
   filterBanner.classList.remove('hidden');
@@ -405,6 +516,7 @@ function startFeed(){
   feedUnsub = onSnapshot(q, snap => {
     allPosts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderFeed();
+    buildFilterBanner();
   }, err => {
     console.error('feed error:', err);
     feed.innerHTML = `<div class="empty warn"><i class="fa-solid fa-triangle-exclamation empty-icon"></i>
@@ -412,16 +524,14 @@ function startFeed(){
   });
 }
 
-/* Structural signature — deliberately EXCLUDES likes & commentCount so that
-   a like/comment won't cause the post HTML to be rebuilt */
 function makePostSig(p){
   return JSON.stringify([
     lang, p.text, p.imageUrl, p.editedAt, p.showProfile,
-    p.authorName, p.authorPhoto, p.anonymous, p.createdAt, p.uid
+    p.authorName, p.authorPhoto, p.anonymous, p.createdAt, p.uid,
+    !!p.hideLikeCount, !!p.hideCommentSection, !!p.hideShareOption
   ]);
 }
 
-/* Patch only the live counters / like button — cheap, no flicker */
 function patchPostDynamic(el, p){
   const likes = p.likes || [];
   const liked = currentUser ? likes.includes(currentUser.uid) : false;
@@ -449,13 +559,15 @@ function patchPostDynamic(el, p){
   }
 }
 
-/* Patch structural bits — author, text, image, profile card, edit buttons.
-   Nothing is replaced wholesale, so the element identity (and its state)
-   is preserved. */
 function patchPostStructure(el, p){
-  const name  = p.anonymous ? t('guest') : (p.authorName || t('guest'));
+  const name  = p.authorName || t('guest');
   const photo = p.anonymous ? '' : (p.authorPhoto || '');
-  const displayName = p.anonymous ? t('anon') : name;
+  const displayName = name;
+
+  /* Apply hide classes */
+  el.classList.toggle('hide-like', !!p.hideLikeCount);
+  el.classList.toggle('hide-comments', !!p.hideCommentSection);
+  el.classList.toggle('hide-share', !!p.hideShareOption);
 
   const headEl = el.querySelector('.post-head');
 
@@ -481,18 +593,24 @@ function patchPostStructure(el, p){
   const newTime = timeAgo(p.createdAt) + (p.editedAt ? ' · ' + esc(t('edited')) : '');
   if (timeEl.textContent !== newTime) timeEl.textContent = newTime;
 
-  /* edit / delete buttons */
+  /* action buttons (edit / delete / menu) */
   const mine = p.uid === currentUser?.uid;
-  const actionsEl = headEl.querySelector('.post-actions-top');
+  const actionsEl = headEl.querySelector('.post-head-actions');
   if (mine && !actionsEl){
     const btnDiv = document.createElement('div');
-    btnDiv.className = 'post-actions-top';
-    btnDiv.innerHTML = `
-      <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
-      <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>`;
+    btnDiv.className = 'post-head-actions';
+    btnDiv.innerHTML = renderPostMenu(p);
     headEl.appendChild(btnDiv);
   } else if (!mine && actionsEl){
     actionsEl.remove();
+  } else if (mine && actionsEl){
+    // Update checkboxes to match new state
+    const cbs = actionsEl.querySelectorAll('input[data-opt]');
+    cbs.forEach(cb => {
+      const opt = cb.dataset.opt;
+      const want = !!p[opt];
+      if (cb.checked !== want) cb.checked = want;
+    });
   }
 
   /* body text */
@@ -557,28 +675,55 @@ function patchPostStructure(el, p){
   }
 }
 
-function renderFeed(){
-  const posts = filterUid ? allPosts.filter(p => p.uid === filterUid) : allPosts;
+function renderPostMenu(p){
+  return `
+    <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
+    <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>
+    <div class="post-menu-wrap">
+      <button class="icon-btn" data-act="toggle-menu" title="${esc(t('menu'))}"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      <div class="post-menu hidden">
+        <label class="menu-item check-item">
+          <input type="checkbox" data-opt="hideLikeCount" ${p.hideLikeCount ? 'checked' : ''}>
+          <i class="fa-solid fa-heart"></i>
+          <span>${esc(t('hideLikeCount'))}</span>
+        </label>
+        <label class="menu-item check-item">
+          <input type="checkbox" data-opt="hideCommentSection" ${p.hideCommentSection ? 'checked' : ''}>
+          <i class="fa-regular fa-comment"></i>
+          <span>${esc(t('hideCommentSection'))}</span>
+        </label>
+        <label class="menu-item check-item">
+          <input type="checkbox" data-opt="hideShareOption" ${p.hideShareOption ? 'checked' : ''}>
+          <i class="fa-solid fa-share-nodes"></i>
+          <span>${esc(t('hideShareOption'))}</span>
+        </label>
+      </div>
+    </div>`;
+}
 
-  /* Empty state — only touch the DOM if we aren't already showing it */
+function renderFeed(){
+  let posts;
+  if (filterPost)      posts = allPosts.filter(p => p.id === filterPost);
+  else if (filterUid)  posts = allPosts.filter(p => p.uid === filterUid);
+  else                 posts = allPosts;
+
   if (!posts.length){
     if (!feed.querySelector('.empty')){
       renderedSigs.clear();
+      const msg = filterPost ? t('postNotFound') : t('noPosts');
+      const sub = filterPost ? '' : t('noPostsSub');
       feed.innerHTML = `<div class="empty"><i class="fa-solid fa-star empty-icon"></i>
-        <b>${esc(t('noPosts'))}</b><br>
-        <span class="small">${esc(t('noPostsSub'))}</span></div>`;
+        <b>${esc(msg)}</b>${sub ? '<br><span class="small">'+esc(sub)+'</span>' : ''}</div>`;
     }
     return;
   }
   if (feed.querySelector('.empty')) feed.innerHTML = '';
 
   const seen = new Set();
-
   posts.forEach((p) => {
     seen.add(p.id);
     const existing = feed.querySelector(`.post[data-id="${p.id}"]`);
 
-    /* New post — create with enter animation */
     if (!existing){
       const tmp = document.createElement('div');
       tmp.innerHTML = renderPost(p);
@@ -590,10 +735,8 @@ function renderFeed(){
       return;
     }
 
-    /* Existing post — always patch dynamic bits (like, counts) */
     patchPostDynamic(existing, p);
 
-    /* Only rebuild the structure if actual content changed */
     const sig = makePostSig(p);
     if (renderedSigs.get(p.id) !== sig){
       patchPostStructure(existing, p);
@@ -601,7 +744,6 @@ function renderFeed(){
     }
   });
 
-  /* Remove posts that no longer exist */
   [...feed.querySelectorAll('.post')].forEach(el => {
     if (!seen.has(el.dataset.id)){
       el.remove();
@@ -609,7 +751,6 @@ function renderFeed(){
     }
   });
 
-  /* Reorder WITHOUT moving DOM nodes — just set flex order */
   posts.forEach((p, i) => {
     const el = feed.querySelector(`.post[data-id="${p.id}"]`);
     if (el){
@@ -625,22 +766,24 @@ function renderPost(p){
   const liked = currentUser ? likes.includes(currentUser.uid) : false;
   const likeCount = Math.max(0, likes.length);
   const commentCount = Math.max(0, p.commentCount || 0);
-  const name = p.anonymous ? t('guest') : (p.authorName || t('guest'));
+  const name = p.authorName || t('guest');
   const photo = p.anonymous ? '' : (p.authorPhoto || '');
-  const displayName = p.anonymous ? t('anon') : name;
+  const displayName = name;
+
+  const cls = ['post','card'];
+  if (p.hideLikeCount) cls.push('hide-like');
+  if (p.hideCommentSection) cls.push('hide-comments');
+  if (p.hideShareOption) cls.push('hide-share');
 
   return `
-  <article class="post card" data-id="${p.id}">
+  <article class="${cls.join(' ')}" data-id="${p.id}">
     <div class="post-head">
       ${avatarHTML(p.anonymous ? '?' : name, photo)}
       <div class="post-meta">
         <div class="post-name">${esc(displayName)}${p.anonymous ? ` <span class="tag">${esc(t('anon'))}</span>` : ''}</div>
         <div class="post-time">${timeAgo(p.createdAt)}${p.editedAt ? ' · ' + esc(t('edited')) : ''}</div>
       </div>
-      ${mine ? `<div class="post-actions-top">
-        <button class="icon-btn" data-act="edit-post" title="${esc(t('edit'))}"><i class="fa-solid fa-pen"></i></button>
-        <button class="icon-btn" data-act="delete-post" title="${esc(t('delete'))}"><i class="fa-solid fa-trash"></i></button>
-      </div>` : ''}
+      ${mine ? `<div class="post-head-actions">${renderPostMenu(p)}</div>` : ''}
     </div>
     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
     ${p.imageUrl ? `<div class="post-image"><img src="${esc(p.imageUrl)}" loading="lazy" alt=""></div>` : ''}
@@ -656,7 +799,7 @@ function renderPost(p){
         </div>
       </div>` : ''}
     <div class="post-stats">
-      <span><i class="fa-solid fa-heart"></i> ${likeCount} ${esc(t('likes'))}</span>
+      <span class="stat-likes"><i class="fa-solid fa-heart"></i> ${likeCount} ${esc(t('likes'))}</span>
       <span><i class="fa-regular fa-comment"></i> ${commentCount} ${esc(t('comments'))}</span>
     </div>
     <div class="post-actions">
@@ -730,9 +873,9 @@ function renderCommentsFor(postId){
 
 function renderComment(c, byParent){
   const mine = c.uid === currentUser?.uid;
-  const name = c.anonymous ? t('guest') : (c.authorName || t('guest'));
+  const name = c.authorName || t('guest');
   const photo = c.anonymous ? '' : (c.authorPhoto || '');
-  const displayName = c.anonymous ? t('anon') : name;
+  const displayName = name;
   const kids = byParent.get(c.id) || [];
 
   return `
@@ -787,7 +930,7 @@ async function addCommentAtomic(postId, parentId, text){
       const count = snap.data().commentCount || 0;
       tx.set(commentRef, {
         uid: currentUser.uid,
-        authorName: anon ? 'Anonymous' : myProfile.name,
+        authorName: anon ? (myProfile.anonName || 'Anonymous') : myProfile.name,
         authorPhoto: anon ? '' : myProfile.photo,
         anonymous: anon,
         text,
@@ -842,6 +985,7 @@ imageInput.addEventListener('change', () => {
   selectedFile = f;
   previewImg.src = URL.createObjectURL(f);
   previewWrap.classList.remove('hidden');
+  scheduleComposerCollapse();
 });
 $('removeImg').addEventListener('click', () => {
   selectedFile = null; imageInput.value = ''; previewImg.src = '';
@@ -862,25 +1006,26 @@ postBtn.addEventListener('click', async () => {
     let imageUrl = '';
     if (selectedFile){
       imageUrl = await compressImage(selectedFile, 1100, 0.72);
-      if (imageUrl.length > 950000){
-        toast(t('imageTooBig'));
-        return;
-      }
+      if (imageUrl.length > 950000){ toast(t('imageTooBig')); return; }
     }
     const anon = anonToggle.checked;
     await addDoc(collection(db, 'posts'), {
       uid: currentUser.uid,
-      authorName: anon ? 'Anonymous' : myProfile.name,
+      authorName: anon ? (myProfile.anonName || 'Anonymous') : myProfile.name,
       authorPhoto: anon ? '' : myProfile.photo,
       anonymous: anon,
       showProfile: anon ? false : profileToggle.checked,
       text, imageUrl,
       likes: [], likeCount: 0, commentCount: 0,
+      hideLikeCount: false,
+      hideCommentSection: false,
+      hideShareOption: false,
       createdAt: serverTimestamp(), editedAt: null
     });
     wishText.value = ''; selectedFile = null; imageInput.value = '';
     previewImg.src = ''; previewWrap.classList.add('hidden');
     anonToggle.checked = false; profileToggle.checked = false; profileToggle.disabled = false;
+    collapseComposer();
     toast(t('postSuccess'));
   } catch (e){
     console.error('post error:', e);
@@ -899,6 +1044,29 @@ feed.addEventListener('input', e => {
   }
 });
 
+/* Checkbox toggle (hide options) */
+feed.addEventListener('change', async e => {
+  if (e.target.matches('input[data-opt]')){
+    const opt = e.target.dataset.opt;
+    const postEl = e.target.closest('.post');
+    if (!postEl) return;
+    const postId = postEl.dataset.id;
+    try {
+      await updateDoc(doc(db, 'posts', postId), { [opt]: e.target.checked });
+      // Update local copy immediately for snappier UI
+      const local = allPosts.find(p => p.id === postId);
+      if (local) local[opt] = e.target.checked;
+      // Reflect on element right away
+      postEl.classList.toggle('hide-like',     !!opt.match(/hideLikeCount/)      ? e.target.checked : postEl.classList.contains('hide-like'));
+      postEl.classList.toggle('hide-comments', !!opt.match(/hideCommentSection/) ? e.target.checked : postEl.classList.contains('hide-comments'));
+      postEl.classList.toggle('hide-share',    !!opt.match(/hideShareOption/)    ? e.target.checked : postEl.classList.contains('hide-share'));
+    } catch (err){
+      console.error(err);
+      e.target.checked = !e.target.checked; // revert
+    }
+  }
+});
+
 feed.addEventListener('click', async e => {
   const btn = e.target.closest('button[data-act]');
   if (!btn) return;
@@ -908,6 +1076,16 @@ feed.addEventListener('click', async e => {
   const postId = postEl.dataset.id;
   const post = allPosts.find(p => p.id === postId);
   if (!post) return;
+
+  /* Toggle 3-dot menu */
+  if (act === 'toggle-menu'){
+    const menu = btn.parentElement.querySelector('.post-menu');
+    if (!menu) return;
+    const wasHidden = menu.classList.contains('hidden');
+    document.querySelectorAll('.post-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
+    if (wasHidden) menu.classList.remove('hidden');
+    return;
+  }
 
   if (act === 'like'){ await toggleLike(postId); return; }
 
@@ -934,6 +1112,8 @@ feed.addEventListener('click', async e => {
 
   if (act === 'edit-post'){
     if (postEl.querySelector('.edit-box')) return;
+    // close menu
+    postEl.querySelectorAll('.post-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
     const bodyEl = postEl.querySelector('.post-body');
     const box = document.createElement('div');
     box.className = 'edit-box';
@@ -973,6 +1153,12 @@ feed.addEventListener('click', async e => {
       }
       openComments.delete(postId); renderedSigs.delete(postId);
       toast(t('deleted'));
+      if (filterPost) {
+        filterPost = null;
+        document.body.classList.remove('single-post-mode');
+        history.replaceState(null, '', location.pathname);
+        filterBanner.classList.add('hidden');
+      }
     } catch (err){ console.error(err); toast(t('deleteError')); }
     return;
   }
