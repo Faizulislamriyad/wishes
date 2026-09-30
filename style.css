@@ -412,3 +412,170 @@ body.single-post-mode{overflow-y:auto;}
   .menu-item{font-size:16px; padding:11px 12px;}
   .post-menu{min-width:250px;}
 }
+/* ============================================================
+   NEW FEATURES
+   ============================================================ */
+
+/* ---------- Collapsible composer ---------- */
+.composer-trigger{
+  display:none;
+  align-items:center; gap:12px;
+  padding:16px;
+  cursor:pointer;
+  color:var(--muted);
+  font-size:1rem;
+  border-radius:var(--radius);
+  transition:.18s;
+}
+.composer-trigger:hover{color:var(--text);}
+.composer-trigger i{font-size:1.1rem; color:var(--accent);}
+.composer.collapsed .composer-trigger{display:flex;}
+.composer.collapsed .composer-body{display:none;}
+.composer:not(.collapsed) .composer-body{padding:16px;}
+
+/* ---------- Post menu (3-dot) ---------- */
+.post-head-actions{
+  display:flex; align-items:center; gap:2px;
+}
+.post-menu-wrap{position:relative;}
+.post-menu{
+  position:absolute; top:100%; right:0; z-index:40;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:6px;
+  box-shadow:0 14px 34px -12px #000;
+  min-width:230px;
+  margin-top:6px;
+  animation:pop .18s ease;
+}
+.menu-item{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:8px;
+  font-size:.88rem; color:var(--text);
+  background:none; border:none; width:100%;
+  text-align:left; cursor:pointer;
+  transition:.15s;
+}
+.menu-item:hover{background:var(--card2);}
+.menu-item i{width:16px; text-align:center; color:var(--muted); flex:none;}
+.menu-item.check-item{cursor:pointer;}
+.menu-item.check-item input{
+  accent-color:var(--accent); width:16px; height:16px; flex:none;
+}
+.menu-item.check-item span{flex:1;}
+
+/* ---------- Field hint ---------- */
+.field-hint{
+  display:block; margin-top:6px;
+  font-size:.74rem; color:var(--muted); line-height:1.4;
+}
+
+/* ---------- Modal actions ---------- */
+.modal-actions{
+  display:flex; flex-direction:column; gap:8px;
+  margin-top:16px; padding-top:16px;
+  border-top:1px solid var(--border);
+}
+.modal-actions .btn{width:100%;}
+
+/* ---------- Anonymous avatar preview ---------- */
+.anon-avatar-preview{
+  margin:4px 0 8px;
+}
+.anon-avatar-preview .avatar{
+  width:44px; height:44px; font-size:1rem;
+  background:#3b3d68;
+}
+
+/* ---------- Single post mode ---------- */
+body.single-post-mode .composer{display:none;}
+body.single-post-mode #feed .post{margin-bottom:0;}
+
+/* ---------- Hidden bits (per-post toggles) ---------- */
+.post.hide-like .post-stats .stat-likes,
+.post.hide-share button[data-act="share"],
+.post.hide-comments button[data-act="toggle-comments"]{
+  display:none;
+}
+.post.hide-comments .comments{display:none !important;}
+
+/* ---------- Large avatar (profile view) ---------- */
+.avatar.lg{width:64px; height:64px; font-size:1.6rem;}
+
+/* ---------- Profile View (when filtering by user) ---------- */
+#profileView{margin-bottom:18px;}
+.profile-view-card{padding:18px;}
+.profile-view-head{
+  display:flex; align-items:center; gap:16px;
+  margin-bottom:14px;
+}
+.profile-view-info{flex:1; min-width:0;}
+.profile-view-info h3{
+  margin:0 0 4px; font-size:1.15rem; font-weight:700;
+  word-wrap:break-word; overflow-wrap:anywhere;
+}
+.profile-view-info p{
+  margin:0; color:var(--muted); font-size:.85rem;
+}
+.profile-view-banner{
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(90deg,rgba(124,92,255,.22),rgba(255,92,138,.16));
+  border:1px solid var(--border); border-radius:12px;
+  padding:11px 14px; font-size:.88rem;
+}
+.profile-view-banner i{color:#a78bfa;}
+.profile-view-banner b{color:var(--text);}
+
+/* ---------- Clickable shared-profile card ---------- */
+a.profile-card{
+  display:block; text-decoration:none; color:inherit;
+  transition:.18s; cursor:pointer;
+}
+a.profile-card:hover{
+  border-color:var(--accent);
+  transform:translateY(-1px);
+}
+.pc-link{font-size:.78rem; color:#a78bfa;}
+
+/* ---------- Comment form (new layout) ---------- */
+.comment-form{
+  display:flex; flex-direction:column; gap:8px;
+  margin-bottom:13px;
+}
+.comment-form-foot{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.comment-form-foot .spacer{flex:1;}
+
+/* ---------- Anonymous toggle in comments ---------- */
+.comment-anon-toggle{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.78rem; color:var(--muted); cursor:pointer;
+  user-select:none;
+  padding:5px 9px; border-radius:8px;
+  transition:.15s;
+  border:1px solid transparent;
+}
+.comment-anon-toggle:hover{color:var(--text); background:var(--card2);}
+.comment-anon-toggle input{
+  accent-color:var(--accent); width:15px; height:15px; cursor:pointer;
+}
+.comment-anon-toggle i{font-size:.85rem;}
+.comment-anon-toggle:has(input:checked){
+  color:#ff9dc0;
+  background:rgba(255,92,138,.12);
+  border-color:rgba(255,92,138,.3);
+}
+
+/* Reply form inside comment */
+.c-reply{
+  display:flex; flex-direction:column; gap:8px;
+  margin:9px 0 4px 34px;
+}
+.c-reply textarea{width:100%;}
+
+/* On mobile, keep menu items readable */
+@media (max-width:768px){
+  .menu-item{font-size:16px; padding:11px 12px;}
+  .post-menu{min-width:250px;}
+  .comment-anon-toggle{font-size:.85rem;}
+}

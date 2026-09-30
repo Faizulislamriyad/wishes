@@ -47,7 +47,6 @@
   <!-- Main app -->
   <div id="appMain" class="hidden">
 
-    <!-- Composer: collapsed by default -->
     <section class="composer card collapsed" id="composer">
       <div class="composer-trigger" id="composerTrigger">
         <i class="fa-regular fa-pen-to-square"></i>
@@ -80,6 +79,7 @@
       </div>
     </section>
 
+    <div id="profileView" class="hidden"></div>
     <div id="filterBanner" class="banner hidden"></div>
 
     <section id="feed"></section>
@@ -106,6 +106,13 @@
       <span data-i18n="anonNickname">বেনামী নাম</span>
       <input id="anonNameInput" maxlength="30" placeholder="Anonymous">
       <small class="field-hint" data-i18n="anonNicknameHint">বেনামী হিসেবে পোস্ট করলে এই নাম দেখানো হবে</small>
+    </label>
+
+    <label class="field">
+      <span data-i18n="anonAvatarImage">বেনামী ছবি</span>
+      <div class="anon-avatar-preview"><span id="modalAnonAvatar"></span></div>
+      <input type="file" id="anonAvatarInput" accept="image/*">
+      <small class="field-hint" data-i18n="anonAvatarHint">বেনামী পোস্ট ও কমেন্টে এই ছবি দেখানো হবে</small>
     </label>
 
     <div class="row end">

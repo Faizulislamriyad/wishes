@@ -35,13 +35,17 @@ const I18N = {
     myProfile:'আমার প্রোফাইল', displayName:'প্রদর্শিত নাম', avatarImage:'প্রোফাইল ছবি',
     anonNickname:'বেনামী নাম',
     anonNicknameHint:'বেনামী হিসেবে পোস্ট করলে এই নামটি দেখানো হবে',
+    anonAvatarImage:'বেনামী ছবি',
+    anonAvatarHint:'বেনামী পোস্ট ও কমেন্টে এই ছবি দেখানো হবে',
     myPosts:'আমার পোস্টগুলো',
     myPostsBanner:'আপনার উইশগুলো দেখানো হচ্ছে',
     save:'সেভ', cancel:'বাতিল', signOut:'সাইন আউট', signInWithGoogle:'Google দিয়ে সাইন ইন',
     guest:'অতিথি', anon:'বেনামী', edited:'সম্পাদিত',
     like:'লাইক', liked:'লাইকড', comment:'কমেন্ট', share:'শেয়ার',
     likes:'লাইক', comments:'কমেন্ট',
+    wishesCount:n=>`${n} টি উইশ`,
     noPosts:'এখনো কোনো উইশ নেই', noPostsSub:'প্রথম উইশটা আপনিই লিখুন!',
+    noPostsUser:'এই ইউজারের কোনো (পাবলিক) উইশ নেই',
     noComments:'এখনো কোনো কমেন্ট নেই। প্রথম কমেন্ট আপনিই করুন!',
     writeComment:'একটি কমেন্ট লিখুন...', writeReply:'উত্তর লিখুন...',
     send:'পাঠান', reply:'উত্তর', edit:'সম্পাদনা', delete:'মুছুন',
@@ -63,6 +67,7 @@ const I18N = {
     showingFrom:'দেখানো হচ্ছে', userWishesOf:' এর উইশগুলো', showAll:'সব দেখান',
     viewingSinglePost:'একটি পোস্ট দেখছেন', backToAll:'সব পোস্ট',
     postNotFound:'পোস্টটি খুঁজে পাওয়া যায়নি',
+    userNotFound:'ইউজার খুঁজে পাওয়া যায়নি',
     googleSignInError:'Google সাইন ইন ব্যর্থ হয়েছে', welcome:'স্বাগতম',
     signOutConfirm:'সাইন আউট করবেন?', viewProfile:'প্রোফাইল দেখুন →',
     sharedProfile:'শেয়ার করা প্রোফাইল',
@@ -79,13 +84,17 @@ const I18N = {
     myProfile:'My Profile', displayName:'Display name', avatarImage:'Avatar image',
     anonNickname:'Anonymous nickname',
     anonNicknameHint:'Shown when you post anonymously',
+    anonAvatarImage:'Anonymous image',
+    anonAvatarHint:'Shown on anonymous posts & comments',
     myPosts:'My Posts',
     myPostsBanner:'Showing your wishes',
     save:'Save', cancel:'Cancel', signOut:'Sign Out', signInWithGoogle:'Sign in with Google',
     guest:'Guest', anon:'anon', edited:'edited',
     like:'Like', liked:'Liked', comment:'Comment', share:'Share',
     likes:'likes', comments:'comments',
+    wishesCount:n=>`${n} wish${n===1?'':'es'}`,
     noPosts:'No wishes yet', noPostsSub:'Be the first to write one!',
+    noPostsUser:'This user has no (public) wishes',
     noComments:'No comments yet. Be the first!',
     writeComment:'Write a comment...', writeReply:'Write a reply...',
     send:'Send', reply:'Reply', edit:'Edit', delete:'Delete',
@@ -107,6 +116,7 @@ const I18N = {
     showingFrom:'Showing wishes from', userWishesOf:'', showAll:'Show all',
     viewingSinglePost:'Viewing single post', backToAll:'Back to all',
     postNotFound:'Post not found',
+    userNotFound:'User not found',
     googleSignInError:'Google sign-in failed', welcome:'Welcome',
     signOutConfirm:'Sign out?', viewProfile:'View profile →',
     sharedProfile:'Shared Profile',
@@ -130,10 +140,11 @@ function applyI18n(){
 
 /* ---------- State ---------- */
 let currentUser = null;
-let myProfile   = { name:'Guest', photo:'', anonName:'' };
+let myProfile   = { name:'Guest', photo:'', anonName:'', anonPhoto:'' };
 let allPosts    = [];
 let selectedFile = null;
 let pendingAvatar = null;
+let pendingAnonAvatar = null;
 
 const params = new URLSearchParams(location.search);
 let filterUid   = params.get('user') || null;
@@ -145,6 +156,8 @@ const commentsCache = new Map();
 const commentUnsubs = new Map();
 const drafts        = new Map();
 const renderedSigs  = new Map();
+const commentAnon   = new Map();  // postId -> bool (state of top comment form)
+const replyAnon     = new Map();  // `${postId}:${cid}` -> bool (state of reply form)
 
 /* ---------- DOM ---------- */
 const $ = id => document.getElementById(id);
@@ -157,6 +170,7 @@ const anonToggle    = $('anonToggle');
 const profileToggle = $('profileCardToggle');
 const postBtn       = $('postBtn');
 const filterBanner  = $('filterBanner');
+const profileView   = $('profileView');
 const toastEl       = $('toast');
 const composer      = $('composer');
 
@@ -180,6 +194,7 @@ function timeAgo(ts){
   if (s < 604800) return t('dayAgo', Math.floor(s/86400));
   return d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US');
 }
+/* avatarHTML — never uses '?' now, always falls back to a letter from the name */
 function avatarHTML(name, photo, cls=''){
   if (photo) return `<span class="avatar ${cls}"><img src="${esc(photo)}" alt=""></span>`;
   const ch = (name||'?').trim().charAt(0).toUpperCase() || '?';
@@ -211,6 +226,39 @@ async function compressImage(file, maxDim=1100, quality=0.72){
     reader.readAsDataURL(file);
   });
 }
+function switchToProfile(uid){
+  filterUid = uid;
+  filterPost = null;
+  document.body.classList.remove('single-post-mode');
+  history.pushState(null, '', '?user=' + uid);
+  renderedSigs.clear();
+  feed.innerHTML = '';
+  renderFeed();
+  buildFilterBanner();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function switchToPost(pid){
+  filterPost = pid;
+  filterUid = null;
+  document.body.classList.add('single-post-mode');
+  history.pushState(null, '', '?post=' + pid);
+  renderedSigs.clear();
+  feed.innerHTML = '';
+  renderFeed();
+  buildFilterBanner();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function clearFilters(){
+  filterUid = null;
+  filterPost = null;
+  document.body.classList.remove('single-post-mode');
+  history.pushState(null, '', location.pathname);
+  profileView.classList.add('hidden');
+  filterBanner.classList.add('hidden');
+  renderedSigs.clear();
+  feed.innerHTML = '';
+  renderFeed();
+}
 
 /* ---------- Composer collapse ---------- */
 let composerTimer = null;
@@ -227,7 +275,7 @@ function scheduleComposerCollapse(){
   clearTimeout(composerTimer);
   composerTimer = setTimeout(() => {
     if (composer.classList.contains('collapsed')) return;
-    if (wishText.value.trim() || selectedFile) return;   // keep open if there's content
+    if (wishText.value.trim() || selectedFile) return;
     collapseComposer();
   }, 10000);
 }
@@ -238,13 +286,11 @@ wishText.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !wishText.value.trim() && !selectedFile) collapseComposer();
 });
 document.addEventListener('click', e => {
-  // Collapse composer when clicking outside it (if empty)
   if (!composer.contains(e.target) &&
       !composer.classList.contains('collapsed') &&
       !wishText.value.trim() && !selectedFile){
     collapseComposer();
   }
-  // Close any open post menus
   if (!e.target.closest('.post-menu-wrap')){
     document.querySelectorAll('.post-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
   }
@@ -364,13 +410,13 @@ async function loadProfile(){
       myProfile = {
         name: d.name || 'Guest',
         photo: d.photo || '',
-        anonName: d.anonName || ''
+        anonName: d.anonName || '',
+        anonPhoto: d.anonPhoto || ''
       };
     } else {
       myProfile = {
         name: 'Guest-' + currentUser.uid.slice(0,4).toUpperCase(),
-        photo: '',
-        anonName: ''
+        photo: '', anonName: '', anonPhoto: ''
       };
       await setDoc(doc(db, 'users', currentUser.uid), {
         ...myProfile, createdAt: serverTimestamp()
@@ -378,7 +424,7 @@ async function loadProfile(){
     }
   } catch (e){
     console.error('loadProfile:', e);
-    myProfile = { name:'Guest', photo:'', anonName:'' };
+    myProfile = { name:'Guest', photo:'', anonName:'', anonPhoto:'' };
   }
   renderMyChip();
 }
@@ -389,10 +435,15 @@ function renderMyChip(){
 
 $('profileBtn').addEventListener('click', () => {
   pendingAvatar = null;
+  pendingAnonAvatar = null;
   $('nameInput').value = myProfile.name;
   $('anonNameInput').value = myProfile.anonName || '';
   $('avatarInput').value = '';
+  $('anonAvatarInput').value = '';
   $('modalAvatar').innerHTML = avatarHTML(myProfile.name, myProfile.photo);
+  $('modalAnonAvatar').innerHTML = myProfile.anonPhoto
+    ? `<span class="avatar"><img src="${esc(myProfile.anonPhoto)}" alt=""></span>`
+    : `<span class="avatar" style="background:#3b3d68"><i class="fa-solid fa-user-secret"></i></span>`;
   if (currentUser && !currentUser.isAnonymous) $('signOutBtn').classList.remove('hidden');
   else $('signOutBtn').classList.add('hidden');
   $('modalBackdrop').classList.remove('hidden');
@@ -408,6 +459,13 @@ $('avatarInput').addEventListener('change', () => {
   pendingAvatar = f;
   $('modalAvatar').innerHTML = `<span class="avatar"><img src="${URL.createObjectURL(f)}" alt=""></span>`;
 });
+$('anonAvatarInput').addEventListener('change', () => {
+  const f = $('anonAvatarInput').files[0];
+  if (!f) return;
+  if (f.size > 5*1024*1024){ toast(t('imageTooBig')); $('anonAvatarInput').value=''; return; }
+  pendingAnonAvatar = f;
+  $('modalAnonAvatar').innerHTML = `<span class="avatar"><img src="${URL.createObjectURL(f)}" alt=""></span>`;
+});
 $('saveProfile').addEventListener('click', async () => {
   const name = $('nameInput').value.trim() || myProfile.name;
   const anonName = $('anonNameInput').value.trim();
@@ -416,9 +474,11 @@ $('saveProfile').addEventListener('click', async () => {
   try {
     let photo = myProfile.photo;
     if (pendingAvatar) photo = await compressImage(pendingAvatar, 320, 0.82);
+    let anonPhoto = myProfile.anonPhoto;
+    if (pendingAnonAvatar) anonPhoto = await compressImage(pendingAnonAvatar, 320, 0.82);
     await setDoc(doc(db, 'users', currentUser.uid),
-      { name, photo, anonName, updatedAt: serverTimestamp() }, { merge: true });
-    myProfile = { name, photo, anonName };
+      { name, photo, anonName, anonPhoto, updatedAt: serverTimestamp() }, { merge: true });
+    myProfile = { name, photo, anonName, anonPhoto };
     renderMyChip();
     $('modalBackdrop').classList.add('hidden');
     toast(t('profileUpdated'));
@@ -431,15 +491,8 @@ $('saveProfile').addEventListener('click', async () => {
 });
 $('myPostsBtn').addEventListener('click', () => {
   if (!currentUser) return;
-  filterUid = currentUser.uid;
-  filterPost = null;
-  document.body.classList.remove('single-post-mode');
-  history.replaceState(null, '', location.pathname + '?user=' + currentUser.uid);
   $('modalBackdrop').classList.add('hidden');
-  renderedSigs.clear();
-  feed.innerHTML = '';
-  renderFeed();
-  buildFilterBanner();
+  switchToProfile(currentUser.uid);
 });
 $('shareProfileBtn').addEventListener('click', async () => {
   if (!currentUser) return;
@@ -459,10 +512,11 @@ $('langToggle').addEventListener('click', () => {
   buildFilterBanner();
 });
 
-/* ---------- Filter banner ---------- */
+/* ---------- Filter / Profile View ---------- */
 async function buildFilterBanner(){
-  // Single post mode
+  /* Single post mode */
   if (filterPost){
+    profileView.classList.add('hidden');
     const exists = allPosts.some(p => p.id === filterPost);
     filterBanner.innerHTML = `
       <span><i class="fa-solid fa-eye"></i> ${esc(t('viewingSinglePost'))}${!exists ? ' — ' + esc(t('postNotFound')) : ''}</span>
@@ -471,43 +525,52 @@ async function buildFilterBanner(){
         <i class="fa-solid fa-arrow-left"></i> ${esc(t('backToAll'))}
       </button>`;
     filterBanner.classList.remove('hidden');
-    $('clearFilter').addEventListener('click', () => {
-      filterPost = null;
-      document.body.classList.remove('single-post-mode');
-      history.replaceState(null, '', location.pathname);
-      filterBanner.classList.add('hidden');
-      renderedSigs.clear();
-      feed.innerHTML = '';
-      renderFeed();
-    });
+    $('clearFilter').addEventListener('click', clearFilters);
     return;
   }
-  // User filter mode
-  if (!filterUid){ filterBanner.classList.add('hidden'); return; }
-  const isMine = currentUser && filterUid === currentUser.uid;
-  let name = '...';
-  if (!isMine){
+
+  /* User profile mode */
+  if (filterUid){
+    filterBanner.classList.add('hidden');
+    const isMine = currentUser && filterUid === currentUser.uid;
+    let name = t('guest'), photo = '';
     try {
       const s = await getDoc(doc(db, 'users', filterUid));
-      if (s.exists()) name = s.data().name || name;
+      if (s.exists()){
+        name  = s.data().name  || name;
+        photo = s.data().photo || '';
+      }
     } catch {}
+    const visiblePosts = allPosts.filter(p =>
+      p.uid === filterUid && (isMine || !p.anonymous)
+    );
+    profileView.innerHTML = `
+      <div class="profile-view-card card">
+        <div class="profile-view-head">
+          ${avatarHTML(name, photo, 'lg')}
+          <div class="profile-view-info">
+            <h3>${esc(name)}</h3>
+            <p>${esc(t('wishesCount', visiblePosts.length))}</p>
+          </div>
+          <button class="btn ghost small" id="clearFilter">
+            <i class="fa-solid fa-xmark"></i> ${esc(t('showAll'))}
+          </button>
+        </div>
+        <div class="profile-view-banner">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          ${isMine
+            ? esc(t('myPostsBanner'))
+            : `${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}`}
+        </div>
+      </div>`;
+    profileView.classList.remove('hidden');
+    $('clearFilter').addEventListener('click', clearFilters);
+    return;
   }
-  const label = isMine
-    ? `<i class="fa-solid fa-user"></i> ${esc(t('myPostsBanner'))}`
-    : `<i class="fa-solid fa-magnifying-glass"></i> ${esc(t('showingFrom'))} <b>${esc(name)}</b>${esc(t('userWishesOf'))}`;
-  filterBanner.innerHTML = `
-    <span>${label}</span>
-    <div class="spacer"></div>
-    <button class="btn ghost small" id="clearFilter"><i class="fa-solid fa-xmark"></i> ${esc(t('showAll'))}</button>`;
-  filterBanner.classList.remove('hidden');
-  $('clearFilter').addEventListener('click', () => {
-    filterUid = null;
-    history.replaceState(null, '', location.pathname);
-    filterBanner.classList.add('hidden');
-    renderedSigs.clear();
-    feed.innerHTML = '';
-    renderFeed();
-  });
+
+  /* No filter */
+  profileView.classList.add('hidden');
+  filterBanner.classList.add('hidden');
 }
 
 /* ---------- FEED ---------- */
@@ -561,39 +624,34 @@ function patchPostDynamic(el, p){
 
 function patchPostStructure(el, p){
   const name  = p.authorName || t('guest');
-  const photo = p.anonymous ? '' : (p.authorPhoto || '');
+  const photo = p.authorPhoto || '';
   const displayName = name;
 
-  /* Apply hide classes */
   el.classList.toggle('hide-like', !!p.hideLikeCount);
   el.classList.toggle('hide-comments', !!p.hideCommentSection);
   el.classList.toggle('hide-share', !!p.hideShareOption);
 
   const headEl = el.querySelector('.post-head');
 
-  /* avatar */
   const avatarEl = headEl.querySelector('.avatar');
   const avSig = `${name}|${photo}`;
   if (avatarEl.dataset.sig !== avSig){
     const tmp = document.createElement('div');
-    tmp.innerHTML = avatarHTML(p.anonymous ? '?' : name, photo);
+    tmp.innerHTML = avatarHTML(name, photo);
     const newAv = tmp.firstElementChild;
     newAv.dataset.sig = avSig;
     avatarEl.replaceWith(newAv);
   }
 
-  /* display name */
   const nameEl = headEl.querySelector('.post-name');
   const newNameHTML =
     `${esc(displayName)}${p.anonymous ? ` <span class="tag">${esc(t('anon'))}</span>` : ''}`;
   if (nameEl.innerHTML !== newNameHTML) nameEl.innerHTML = newNameHTML;
 
-  /* timestamp */
   const timeEl = headEl.querySelector('.post-time');
   const newTime = timeAgo(p.createdAt) + (p.editedAt ? ' · ' + esc(t('edited')) : '');
   if (timeEl.textContent !== newTime) timeEl.textContent = newTime;
 
-  /* action buttons (edit / delete / menu) */
   const mine = p.uid === currentUser?.uid;
   const actionsEl = headEl.querySelector('.post-head-actions');
   if (mine && !actionsEl){
@@ -604,7 +662,6 @@ function patchPostStructure(el, p){
   } else if (!mine && actionsEl){
     actionsEl.remove();
   } else if (mine && actionsEl){
-    // Update checkboxes to match new state
     const cbs = actionsEl.querySelectorAll('input[data-opt]');
     cbs.forEach(cb => {
       const opt = cb.dataset.opt;
@@ -613,7 +670,6 @@ function patchPostStructure(el, p){
     });
   }
 
-  /* body text */
   const bodyEl = el.querySelector('.post-body');
   if (p.text){
     if (bodyEl){
@@ -628,7 +684,6 @@ function patchPostStructure(el, p){
     bodyEl.remove();
   }
 
-  /* image */
   const imgWrap = el.querySelector('.post-image');
   if (p.imageUrl){
     if (imgWrap){
@@ -644,7 +699,7 @@ function patchPostStructure(el, p){
     imgWrap.remove();
   }
 
-  /* profile card */
+  /* Profile card — now an <a> */
   const pcEl = el.querySelector('.profile-card');
   const shouldShowPC = p.showProfile && !p.anonymous;
   const pcSig = `${name}|${photo}|${p.uid}`;
@@ -655,7 +710,7 @@ function patchPostStructure(el, p){
         ${avatarHTML(name, photo)}
         <div>
           <div class="pc-name">${esc(name)}</div>
-          <a class="pc-link" href="?user=${esc(p.uid)}">${esc(t('viewProfile'))}</a>
+          <span class="pc-link">${esc(t('viewProfile'))}</span>
         </div>
       </div>`;
     if (pcEl){
@@ -664,8 +719,9 @@ function patchPostStructure(el, p){
         pcEl.dataset.sig = pcSig;
       }
     } else {
-      const newPC = document.createElement('div');
+      const newPC = document.createElement('a');
       newPC.className = 'profile-card';
+      newPC.href = `?user=${esc(p.uid)}`;
       newPC.innerHTML = pcHTML;
       newPC.dataset.sig = pcSig;
       el.querySelector('.post-stats').before(newPC);
@@ -703,15 +759,22 @@ function renderPostMenu(p){
 
 function renderFeed(){
   let posts;
-  if (filterPost)      posts = allPosts.filter(p => p.id === filterPost);
-  else if (filterUid)  posts = allPosts.filter(p => p.uid === filterUid);
-  else                 posts = allPosts;
+  if (filterPost){
+    posts = allPosts.filter(p => p.id === filterPost);
+  } else if (filterUid){
+    const isMine = currentUser && filterUid === currentUser.uid;
+    posts = allPosts.filter(p => p.uid === filterUid && (isMine || !p.anonymous));
+  } else {
+    posts = allPosts;
+  }
 
   if (!posts.length){
     if (!feed.querySelector('.empty')){
       renderedSigs.clear();
-      const msg = filterPost ? t('postNotFound') : t('noPosts');
-      const sub = filterPost ? '' : t('noPostsSub');
+      let msg, sub = '';
+      if (filterPost){ msg = t('postNotFound'); }
+      else if (filterUid){ msg = t('noPostsUser'); }
+      else { msg = t('noPosts'); sub = t('noPostsSub'); }
       feed.innerHTML = `<div class="empty"><i class="fa-solid fa-star empty-icon"></i>
         <b>${esc(msg)}</b>${sub ? '<br><span class="small">'+esc(sub)+'</span>' : ''}</div>`;
     }
@@ -767,7 +830,7 @@ function renderPost(p){
   const likeCount = Math.max(0, likes.length);
   const commentCount = Math.max(0, p.commentCount || 0);
   const name = p.authorName || t('guest');
-  const photo = p.anonymous ? '' : (p.authorPhoto || '');
+  const photo = p.authorPhoto || '';
   const displayName = name;
 
   const cls = ['post','card'];
@@ -778,7 +841,7 @@ function renderPost(p){
   return `
   <article class="${cls.join(' ')}" data-id="${p.id}">
     <div class="post-head">
-      ${avatarHTML(p.anonymous ? '?' : name, photo)}
+      ${avatarHTML(name, photo)}
       <div class="post-meta">
         <div class="post-name">${esc(displayName)}${p.anonymous ? ` <span class="tag">${esc(t('anon'))}</span>` : ''}</div>
         <div class="post-time">${timeAgo(p.createdAt)}${p.editedAt ? ' · ' + esc(t('edited')) : ''}</div>
@@ -788,16 +851,16 @@ function renderPost(p){
     ${p.text ? `<div class="post-body">${esc(p.text)}</div>` : ''}
     ${p.imageUrl ? `<div class="post-image"><img src="${esc(p.imageUrl)}" loading="lazy" alt=""></div>` : ''}
     ${(p.showProfile && !p.anonymous) ? `
-      <div class="profile-card">
+      <a class="profile-card" href="?user=${esc(p.uid)}">
         <div class="pc-label">${esc(t('sharedProfile'))}</div>
         <div class="pc-row">
           ${avatarHTML(name, photo)}
           <div>
             <div class="pc-name">${esc(name)}</div>
-            <a class="pc-link" href="?user=${esc(p.uid)}">${esc(t('viewProfile'))}</a>
+            <span class="pc-link">${esc(t('viewProfile'))}</span>
           </div>
         </div>
-      </div>` : ''}
+      </a>` : ''}
     <div class="post-stats">
       <span class="stat-likes"><i class="fa-solid fa-heart"></i> ${likeCount} ${esc(t('likes'))}</span>
       <span><i class="fa-regular fa-comment"></i> ${commentCount} ${esc(t('comments'))}</span>
@@ -852,16 +915,26 @@ function renderCommentsFor(postId){
   const buildTree = key => {
     const kids = byParent.get(key) || [];
     if (!kids.length) return '';
-    return `<div class="c-children">${kids.map(c => renderComment(c, byParent)).join('')}</div>`;
+    return `<div class="c-children">${kids.map(c => renderComment(c, byParent, postId)).join('')}</div>`;
   };
+
+  const anonChecked = commentAnon.get(postId) ? 'checked' : '';
 
   container.innerHTML = `
     <div class="comment-form">
       <textarea class="comment-input" data-key="${postId}:root" rows="1"
         placeholder="${esc(t('writeComment'))}"></textarea>
-      <button class="btn small primary" data-act="add-comment">
-        <i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}
-      </button>
+      <div class="comment-form-foot">
+        <label class="comment-anon-toggle" title="${esc(t('anonymous'))}">
+          <input type="checkbox" class="comment-anon-cb" data-key="${postId}:root" ${anonChecked}>
+          <i class="fa-solid fa-user-secret"></i>
+          <span>${esc(t('anonymous'))}</span>
+        </label>
+        <div class="spacer"></div>
+        <button class="btn small primary" data-act="add-comment">
+          <i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}
+        </button>
+      </div>
     </div>
     ${buildTree('root') || `<p class="muted small" style="margin:0">${esc(t('noComments'))}</p>`}`;
 
@@ -871,18 +944,19 @@ function renderCommentsFor(postId){
   });
 }
 
-function renderComment(c, byParent){
+function renderComment(c, byParent, postId){
   const mine = c.uid === currentUser?.uid;
   const name = c.authorName || t('guest');
-  const photo = c.anonymous ? '' : (c.authorPhoto || '');
+  const photo = c.authorPhoto || '';
   const displayName = name;
   const kids = byParent.get(c.id) || [];
 
   return `
   <div class="comment" data-comment-id="${c.id}">
     <div class="c-head">
-      ${avatarHTML(c.anonymous ? '?' : name, photo, 'sm')}
+      ${avatarHTML(name, photo, 'sm')}
       <span class="c-name">${esc(displayName)}</span>
+      ${c.anonymous ? `<span class="tag">${esc(t('anon'))}</span>` : ''}
       <span class="c-time">${timeAgo(c.createdAt)}${c.editedAt ? ' · ' + esc(t('edited')) : ''}</span>
     </div>
     <div class="c-body">${esc(c.text)}</div>
@@ -892,7 +966,7 @@ function renderComment(c, byParent){
                 <button data-act="delete-comment"><i class="fa-solid fa-trash"></i> ${esc(t('delete'))}</button>` : ''}
     </div>
     <div class="c-reply hidden" data-open="0"></div>
-    ${kids.length ? `<div class="c-children">${kids.map(k => renderComment(k, byParent)).join('')}</div>` : ''}
+    ${kids.length ? `<div class="c-children">${kids.map(k => renderComment(k, byParent, postId)).join('')}</div>` : ''}
   </div>`;
 }
 
@@ -918,9 +992,8 @@ async function toggleLike(postId){
   }
 }
 
-async function addCommentAtomic(postId, parentId, text){
+async function addCommentAtomic(postId, parentId, text, anon){
   if (!currentUser) return;
-  const anon = anonToggle.checked;
   const postRef = doc(db, 'posts', postId);
   const commentRef = doc(collection(db, 'posts', postId, 'comments'));
   try {
@@ -931,7 +1004,7 @@ async function addCommentAtomic(postId, parentId, text){
       tx.set(commentRef, {
         uid: currentUser.uid,
         authorName: anon ? (myProfile.anonName || 'Anonymous') : myProfile.name,
-        authorPhoto: anon ? '' : myProfile.photo,
+        authorPhoto: anon ? (myProfile.anonPhoto || '') : (myProfile.photo || ''),
         anonymous: anon,
         text,
         parentId: parentId || null,
@@ -1012,7 +1085,7 @@ postBtn.addEventListener('click', async () => {
     await addDoc(collection(db, 'posts'), {
       uid: currentUser.uid,
       authorName: anon ? (myProfile.anonName || 'Anonymous') : myProfile.name,
-      authorPhoto: anon ? '' : myProfile.photo,
+      authorPhoto: anon ? (myProfile.anonPhoto || '') : (myProfile.photo || ''),
       anonymous: anon,
       showProfile: anon ? false : profileToggle.checked,
       text, imageUrl,
@@ -1044,8 +1117,8 @@ feed.addEventListener('input', e => {
   }
 });
 
-/* Checkbox toggle (hide options) */
 feed.addEventListener('change', async e => {
+  /* Per-post hide toggles */
   if (e.target.matches('input[data-opt]')){
     const opt = e.target.dataset.opt;
     const postEl = e.target.closest('.post');
@@ -1053,21 +1126,42 @@ feed.addEventListener('change', async e => {
     const postId = postEl.dataset.id;
     try {
       await updateDoc(doc(db, 'posts', postId), { [opt]: e.target.checked });
-      // Update local copy immediately for snappier UI
       const local = allPosts.find(p => p.id === postId);
       if (local) local[opt] = e.target.checked;
-      // Reflect on element right away
-      postEl.classList.toggle('hide-like',     !!opt.match(/hideLikeCount/)      ? e.target.checked : postEl.classList.contains('hide-like'));
-      postEl.classList.toggle('hide-comments', !!opt.match(/hideCommentSection/) ? e.target.checked : postEl.classList.contains('hide-comments'));
-      postEl.classList.toggle('hide-share',    !!opt.match(/hideShareOption/)    ? e.target.checked : postEl.classList.contains('hide-share'));
+      if (opt === 'hideLikeCount')      postEl.classList.toggle('hide-like', e.target.checked);
+      if (opt === 'hideCommentSection') postEl.classList.toggle('hide-comments', e.target.checked);
+      if (opt === 'hideShareOption')    postEl.classList.toggle('hide-share', e.target.checked);
     } catch (err){
       console.error(err);
-      e.target.checked = !e.target.checked; // revert
+      e.target.checked = !e.target.checked;
     }
+    return;
+  }
+
+  /* Anonymous toggle in comment / reply form */
+  if (e.target.classList.contains('comment-anon-cb')){
+    const key = e.target.dataset.key; // "postId:root" or "postId:cid"
+    if (!key) return;
+    const [pid, cid] = key.split(':');
+    if (cid === 'root') commentAnon.set(pid, e.target.checked);
+    else replyAnon.set(key, e.target.checked);
+    return;
   }
 });
 
 feed.addEventListener('click', async e => {
+  /* Profile / view-profile link clicks (open SPA-style) */
+  const profileLink = e.target.closest('a.profile-card, a.pc-link');
+  if (profileLink){
+    e.preventDefault();
+    try {
+      const url = new URL(profileLink.href, location.origin);
+      const uid = url.searchParams.get('user');
+      if (uid) switchToProfile(uid);
+    } catch (err){ console.error(err); }
+    return;
+  }
+
   const btn = e.target.closest('button[data-act]');
   if (!btn) return;
   const act = btn.dataset.act;
@@ -1077,7 +1171,6 @@ feed.addEventListener('click', async e => {
   const post = allPosts.find(p => p.id === postId);
   if (!post) return;
 
-  /* Toggle 3-dot menu */
   if (act === 'toggle-menu'){
     const menu = btn.parentElement.querySelector('.post-menu');
     if (!menu) return;
@@ -1112,7 +1205,6 @@ feed.addEventListener('click', async e => {
 
   if (act === 'edit-post'){
     if (postEl.querySelector('.edit-box')) return;
-    // close menu
     postEl.querySelectorAll('.post-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
     const bodyEl = postEl.querySelector('.post-body');
     const box = document.createElement('div');
@@ -1153,23 +1245,20 @@ feed.addEventListener('click', async e => {
       }
       openComments.delete(postId); renderedSigs.delete(postId);
       toast(t('deleted'));
-      if (filterPost) {
-        filterPost = null;
-        document.body.classList.remove('single-post-mode');
-        history.replaceState(null, '', location.pathname);
-        filterBanner.classList.add('hidden');
-      }
+      if (filterPost === postId) clearFilters();
     } catch (err){ console.error(err); toast(t('deleteError')); }
     return;
   }
 
   if (act === 'add-comment'){
     const ta = postEl.querySelector('.comment-form .comment-input');
+    const anonCb = postEl.querySelector('.comment-form .comment-anon-cb');
     const val = ta.value.trim();
+    const anon = anonCb ? anonCb.checked : false;
     if (!val){ toast(t('commentRequired')); return; }
     ta.value = '';
     drafts.delete(`${postId}:root`);
-    await addCommentAtomic(postId, null, val);
+    await addCommentAtomic(postId, null, val, anon);
     return;
   }
 
@@ -1181,15 +1270,25 @@ feed.addEventListener('click', async e => {
     }
     box.dataset.open = '1'; box.classList.remove('hidden');
     const cid = cEl.dataset.commentId;
+    const rKey = `${postId}:${cid}`;
+    const rChecked = replyAnon.get(rKey) ? 'checked' : '';
     box.innerHTML = `
-      <textarea class="comment-input" data-key="${postId}:${cid}" data-reply="1" rows="2"
+      <textarea class="comment-input" data-key="${rKey}" data-reply="1" rows="2"
         placeholder="${esc(t('writeReply'))}"></textarea>
-      <div class="row end">
+      <div class="comment-form-foot">
+        <label class="comment-anon-toggle" title="${esc(t('anonymous'))}">
+          <input type="checkbox" class="comment-anon-cb" data-key="${rKey}" ${rChecked}>
+          <i class="fa-solid fa-user-secret"></i>
+          <span>${esc(t('anonymous'))}</span>
+        </label>
+        <div class="spacer"></div>
         <button class="btn small ghost" data-act="cancel-reply">${esc(t('cancel'))}</button>
-        <button class="btn small primary" data-act="send-reply" data-parent="${cid}"><i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}</button>
+        <button class="btn small primary" data-act="send-reply" data-parent="${cid}">
+          <i class="fa-solid fa-paper-plane"></i> ${esc(t('send'))}
+        </button>
       </div>`;
     const ta = box.querySelector('textarea');
-    ta.value = drafts.get(`${postId}:${cid}`) || '';
+    ta.value = drafts.get(rKey) || '';
     ta.focus();
     return;
   }
@@ -1204,11 +1303,14 @@ feed.addEventListener('click', async e => {
   if (act === 'send-reply'){
     const parentId = btn.dataset.parent;
     const cEl = btn.closest('.comment');
-    const ta = cEl.querySelector(':scope > .c-reply textarea');
+    const box = cEl.querySelector(':scope > .c-reply');
+    const ta = box.querySelector('textarea');
+    const anonCb = box.querySelector('.comment-anon-cb');
     const val = ta.value.trim();
+    const anon = anonCb ? anonCb.checked : false;
     if (!val){ toast(t('replyRequired')); return; }
     ta.value = ''; drafts.delete(`${postId}:${parentId}`);
-    await addCommentAtomic(postId, parentId, val);
+    await addCommentAtomic(postId, parentId, val, anon);
     return;
   }
 
