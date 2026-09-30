@@ -72,7 +72,9 @@ const I18N = {
     signOutConfirm:'সাইন আউট করবেন?', viewProfile:'প্রোফাইল দেখুন →',
     sharedProfile:'শেয়ার করা প্রোফাইল',
     anonDisabled:'Anonymous sign-in Firebase Console-এ চালু করা নেই',
-    netErr:'নেটওয়ার্ক সমস্যা', signInFail:'সাইন ইন ব্যর্থ'
+    netErr:'নেটওয়ার্ক সমস্যা', signInFail:'সাইন ইন ব্যর্থ',
+    moreSites:'Faizul Islam Riyad এর অন্যান্য ওয়েবসাইট',
+    footerNote:'ভালোবাসা দিয়ে তৈরি'
   },
   en: {
     shareProfile:'Share', signInGoogle:'Sign in with Google',
@@ -121,7 +123,9 @@ const I18N = {
     signOutConfirm:'Sign out?', viewProfile:'View profile →',
     sharedProfile:'Shared Profile',
     anonDisabled:'Anonymous sign-in is disabled in Firebase Console',
-    netErr:'Network error', signInFail:'Sign-in failed'
+    netErr:'Network error', signInFail:'Sign-in failed',
+    moreSites:'More websites by Faizul Islam Riyad',
+    footerNote:'Made with care'
   }
 };
 let lang = localStorage.getItem('wishes-lang') || 'bn';
@@ -156,8 +160,8 @@ const commentsCache = new Map();
 const commentUnsubs = new Map();
 const drafts        = new Map();
 const renderedSigs  = new Map();
-const commentAnon   = new Map();  // postId -> bool (state of top comment form)
-const replyAnon     = new Map();  // `${postId}:${cid}` -> bool (state of reply form)
+const commentAnon   = new Map();
+const replyAnon     = new Map();
 
 /* ---------- DOM ---------- */
 const $ = id => document.getElementById(id);
@@ -194,7 +198,6 @@ function timeAgo(ts){
   if (s < 604800) return t('dayAgo', Math.floor(s/86400));
   return d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US');
 }
-/* avatarHTML — never uses '?' now, always falls back to a letter from the name */
 function avatarHTML(name, photo, cls=''){
   if (photo) return `<span class="avatar ${cls}"><img src="${esc(photo)}" alt=""></span>`;
   const ch = (name||'?').trim().charAt(0).toUpperCase() || '?';
@@ -231,17 +234,6 @@ function switchToProfile(uid){
   filterPost = null;
   document.body.classList.remove('single-post-mode');
   history.pushState(null, '', '?user=' + uid);
-  renderedSigs.clear();
-  feed.innerHTML = '';
-  renderFeed();
-  buildFilterBanner();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-function switchToPost(pid){
-  filterPost = pid;
-  filterUid = null;
-  document.body.classList.add('single-post-mode');
-  history.pushState(null, '', '?post=' + pid);
   renderedSigs.clear();
   feed.innerHTML = '';
   renderFeed();
@@ -514,7 +506,6 @@ $('langToggle').addEventListener('click', () => {
 
 /* ---------- Filter / Profile View ---------- */
 async function buildFilterBanner(){
-  /* Single post mode */
   if (filterPost){
     profileView.classList.add('hidden');
     const exists = allPosts.some(p => p.id === filterPost);
@@ -529,7 +520,6 @@ async function buildFilterBanner(){
     return;
   }
 
-  /* User profile mode */
   if (filterUid){
     filterBanner.classList.add('hidden');
     const isMine = currentUser && filterUid === currentUser.uid;
@@ -568,7 +558,6 @@ async function buildFilterBanner(){
     return;
   }
 
-  /* No filter */
   profileView.classList.add('hidden');
   filterBanner.classList.add('hidden');
 }
@@ -699,7 +688,6 @@ function patchPostStructure(el, p){
     imgWrap.remove();
   }
 
-  /* Profile card — now an <a> */
   const pcEl = el.querySelector('.profile-card');
   const shouldShowPC = p.showProfile && !p.anonymous;
   const pcSig = `${name}|${photo}|${p.uid}`;
@@ -1118,7 +1106,6 @@ feed.addEventListener('input', e => {
 });
 
 feed.addEventListener('change', async e => {
-  /* Per-post hide toggles */
   if (e.target.matches('input[data-opt]')){
     const opt = e.target.dataset.opt;
     const postEl = e.target.closest('.post');
@@ -1138,9 +1125,8 @@ feed.addEventListener('change', async e => {
     return;
   }
 
-  /* Anonymous toggle in comment / reply form */
   if (e.target.classList.contains('comment-anon-cb')){
-    const key = e.target.dataset.key; // "postId:root" or "postId:cid"
+    const key = e.target.dataset.key;
     if (!key) return;
     const [pid, cid] = key.split(':');
     if (cid === 'root') commentAnon.set(pid, e.target.checked);
@@ -1150,7 +1136,6 @@ feed.addEventListener('change', async e => {
 });
 
 feed.addEventListener('click', async e => {
-  /* Profile / view-profile link clicks (open SPA-style) */
   const profileLink = e.target.closest('a.profile-card, a.pc-link');
   if (profileLink){
     e.preventDefault();
